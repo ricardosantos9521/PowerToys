@@ -5,9 +5,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Wox.Infrastructure.Logger;
+using Wox.Plugin.Logger;
 
 namespace Wox.Infrastructure
 {
@@ -95,7 +96,7 @@ namespace Wox.Infrastructure
             }
             catch (System.Exception ex)
             {
-                Log.Exception($"Wox.Infrastructure.Helper| Unable to Run {path} as admin : {ex.Message}", ex);
+                Log.Exception($"Unable to Run {path} as admin : {ex.Message}", ex, MethodBase.GetCurrentMethod().DeclaringType);
             }
         }
 

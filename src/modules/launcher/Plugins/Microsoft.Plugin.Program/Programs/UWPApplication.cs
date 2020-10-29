@@ -16,12 +16,13 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ManagedCommon;
 using Microsoft.Plugin.Program.Logger;
 using Microsoft.Plugin.Program.Win32;
 using Wox.Infrastructure;
 using Wox.Infrastructure.Image;
-using Wox.Infrastructure.Logger;
 using Wox.Plugin;
+using Wox.Plugin.Logger;
 using Wox.Plugin.SharedCommands;
 using static Microsoft.Plugin.Program.Programs.UWP;
 
@@ -74,12 +75,12 @@ namespace Microsoft.Plugin.Program.Programs
         }
 
         // Function to set the subtitle based on the Type of application
-        private static string SetSubtitle(IPublicAPI api)
+        private static string SetSubtitle()
         {
-            return api.GetTranslation("powertoys_run_plugin_program_packaged_application");
+            return Properties.Resources.powertoys_run_plugin_program_packaged_application;
         }
 
-        public Result Result(string query, IPublicAPI api)
+        public Result Result(string query, string queryArguments, IPublicAPI api)
         {
             if (api == null)
             {
@@ -94,30 +95,31 @@ namespace Microsoft.Plugin.Program.Programs
 
             var result = new Result
             {
-                SubTitle = SetSubtitle(api),
+                SubTitle = SetSubtitle(),
                 Icon = Logo,
                 Score = score,
                 ContextData = this,
+                ProgramArguments = queryArguments,
                 Action = e =>
                 {
-                    Launch(api);
+                    Launch(api, queryArguments);
                     return true;
                 },
             };
 
             // To set the title to always be the displayname of the packaged application
             result.Title = DisplayName;
-            result.TitleHighlightData = StringMatcher.FuzzySearch(query, Name).MatchData;
+            result.SetTitleHighlightData(StringMatcher.FuzzySearch(query, Name).MatchData);
 
-            var toolTipTitle = string.Format(CultureInfo.CurrentCulture, "{0}: {1}", api.GetTranslation("powertoys_run_plugin_program_file_name"), result.Title);
-            var toolTipText = string.Format(CultureInfo.CurrentCulture, "{0}: {1}", api.GetTranslation("powertoys_run_plugin_program_file_path"), Package.Location);
+            var toolTipTitle = string.Format(CultureInfo.CurrentCulture, "{0}: {1}", Properties.Resources.powertoys_run_plugin_program_file_name, result.Title);
+            var toolTipText = string.Format(CultureInfo.CurrentCulture, "{0}: {1}", Properties.Resources.powertoys_run_plugin_program_file_path, Package.Location);
             result.ToolTipData = new ToolTipData(toolTipTitle, toolTipText);
 
             return result;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Intentially keeping the process alive.")]
-        public List<ContextMenuResult> ContextMenus(IPublicAPI api)
+        public List<ContextMenuResult> ContextMenus(string queryArguments, IPublicAPI api)
         {
             if (api == null)
             {
@@ -132,7 +134,7 @@ namespace Microsoft.Plugin.Program.Programs
                         new ContextMenuResult
                         {
                             PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                            Title = api.GetTranslation("wox_plugin_program_run_as_administrator"),
+                            Title = Properties.Resources.wox_plugin_program_run_as_administrator,
                             Glyph = "\xE7EF",
                             FontFamily = "Segoe MDL2 Assets",
                             AcceleratorKey = Key.Enter,
@@ -144,7 +146,7 @@ namespace Microsoft.Plugin.Program.Programs
 
                                 var info = ShellCommand.SetProcessStartInfo(command, verb: "runas");
                                 info.UseShellExecute = true;
-
+                                info.Arguments = queryArguments;
                                 Process.Start(info);
                                 return true;
                             },
@@ -155,7 +157,7 @@ namespace Microsoft.Plugin.Program.Programs
                 new ContextMenuResult
                 {
                     PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                    Title = api.GetTranslation("wox_plugin_program_open_containing_folder"),
+                    Title = Properties.Resources.wox_plugin_program_open_containing_folder,
                     Glyph = "\xE838",
                     FontFamily = "Segoe MDL2 Assets",
                     AcceleratorKey = Key.E,
@@ -171,7 +173,7 @@ namespace Microsoft.Plugin.Program.Programs
             contextMenus.Add(new ContextMenuResult
             {
                 PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                Title = api.GetTranslation("wox_plugin_program_open_in_console"),
+                Title = Properties.Resources.wox_plugin_program_open_in_console,
                 Glyph = "\xE756",
                 FontFamily = "Segoe MDL2 Assets",
                 AcceleratorKey = Key.C,
@@ -185,7 +187,7 @@ namespace Microsoft.Plugin.Program.Programs
                     }
                     catch (Exception e)
                     {
-                        Log.Exception($"|Microsoft.Plugin.Program.UWP.ContextMenu| Failed to open {Name} in console, {e.Message}", e);
+                        Log.Exception($"Failed to open {Name} in console, {e.Message}", e, GetType());
                         return false;
                     }
                 },
@@ -195,21 +197,20 @@ namespace Microsoft.Plugin.Program.Programs
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Intentially keeping the process alive, and showing the user an error message")]
-        private async void Launch(IPublicAPI api)
+        private async void Launch(IPublicAPI api, string queryArguments)
         {
             var appManager = new ApplicationActivationHelper.ApplicationActivationManager();
-            const string noArgs = "";
             const ApplicationActivationHelper.ActivateOptions noFlags = ApplicationActivationHelper.ActivateOptions.None;
             await Task.Run(() =>
             {
                 try
                 {
-                    appManager.ActivateApplication(UserModelId, noArgs, noFlags, out uint unusedPid);
+                    appManager.ActivateApplication(UserModelId, queryArguments, noFlags, out var unusedPid);
                 }
                 catch (Exception)
                 {
-                    var name = "Plugin: Program";
-                    var message = $"Can't start UWP: {DisplayName}";
+                    var name = "Plugin: " + Properties.Resources.wox_plugin_program_plugin_name;
+                    var message = $"{Properties.Resources.powertoys_run_plugin_program_uwp_failed}: {DisplayName}";
                     api.ShowMsg(name, message, string.Empty);
                 }
             }).ConfigureAwait(false);
@@ -311,9 +312,8 @@ namespace Microsoft.Plugin.Program.Programs
                     }
                     else
                     {
-                        ProgramLogger.LogException(
-                            $"|UWP|ResourceFromPri|{Package.Location}|Can't load null or empty result "
-                                                    + $"pri {source} in uwp location {Package.Location}", new NullReferenceException());
+                        ProgramLogger.Exception($"Can't load null or empty result pri {source} in uwp location {Package.Location}", new NullReferenceException(), GetType(), Package.Location);
+
                         return string.Empty;
                     }
                 }
@@ -326,7 +326,8 @@ namespace Microsoft.Plugin.Program.Programs
                     // Microsoft.MicrosoftOfficeHub_17.7608.23501.0_x64__8wekyb3d8bbwe: ms-resource://Microsoft.MicrosoftOfficeHub/officehubintl/AppManifest_GetOffice_Description
                     // Microsoft.BingFoodAndDrink_3.0.4.336_x64__8wekyb3d8bbwe: ms-resource:AppDescription
                     var e = Marshal.GetExceptionForHR((int)hResult);
-                    ProgramLogger.LogException($"|UWP|ResourceFromPri|{Package.Location}|Load pri failed {source} with HResult {hResult} and location {Package.Location}", e);
+                    ProgramLogger.Exception($"Load pri failed {source} with HResult {hResult} and location {Package.Location}", e, GetType(), Package.Location);
+
                     return string.Empty;
                 }
             }
@@ -570,9 +571,7 @@ namespace Microsoft.Plugin.Program.Programs
             {
                 LogoPath = string.Empty;
                 LogoType = LogoType.Error;
-                ProgramLogger.LogException(
-                            $"|UWP|LogoPathFromUri|{Package.Location}" +
-                            $"|{UserModelId} can't find logo uri for {uri} in package location: {Package.Location}", new FileNotFoundException());
+                ProgramLogger.Exception($"|{UserModelId} can't find logo uri for {uri} in package location: {Package.Location}", new FileNotFoundException(), GetType(), Package.Location);
             }
         }
 
@@ -589,6 +588,8 @@ namespace Microsoft.Plugin.Program.Programs
                 return ImageFromPath(LogoPath);
             }
         }
+
+        private const int _dpiScale100 = 96;
 
         private ImageSource PlatedImage(BitmapImage image)
         {
@@ -631,21 +632,21 @@ namespace Microsoft.Plugin.Program.Programs
                     var context = visual.RenderOpen();
                     context.DrawDrawing(group);
                     context.Close();
-                    const int dpiScale100 = 96;
+
                     var bitmap = new RenderTargetBitmap(
                         Convert.ToInt32(width),
                         Convert.ToInt32(height),
-                        dpiScale100,
-                        dpiScale100,
+                        _dpiScale100,
+                        _dpiScale100,
                         PixelFormats.Pbgra32);
+
                     bitmap.Render(visual);
+
                     return bitmap;
                 }
                 else
                 {
-                    ProgramLogger.LogException(
-                        $"|UWP|PlatedImage|{Package.Location}|Unable to convert background string {BackgroundColor} " +
-                                                $"to color for {Package.Location}", new InvalidOperationException());
+                    ProgramLogger.Exception($"Unable to convert background string {BackgroundColor} to color for {Package.Location}", new InvalidOperationException(), GetType(), Package.Location);
 
                     return new BitmapImage(new Uri(Constant.ErrorIcon));
                 }
@@ -675,9 +676,7 @@ namespace Microsoft.Plugin.Program.Programs
             }
             else
             {
-                ProgramLogger.LogException(
-                    $"|UWP|ImageFromPath|{path}|Unable to get logo for {UserModelId} from {path} and" +
-                                                $" located in {Package.Location}", new FileNotFoundException());
+                ProgramLogger.Exception($"Unable to get logo for {UserModelId} from {path} and located in {Package.Location}", new FileNotFoundException(), GetType(), path);
                 return new BitmapImage(new Uri(ImageLoader.ErrorIconPath));
             }
         }

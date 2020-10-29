@@ -5,14 +5,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Wox.Infrastructure;
-using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Infrastructure.UserSettings;
 using Wox.Plugin;
+using Wox.Plugin.Logger;
 
 namespace Wox.Core.Plugin
 {
@@ -26,7 +28,7 @@ namespace Wox.Core.Plugin
         /// <summary>
         /// Gets directories that will hold Wox plugin directory
         /// </summary>
-        public static List<PluginPair> AllPlugins { get; private set; }
+        public static List<PluginPair> AllPlugins { get; private set; } = new List<PluginPair>();
 
         public static IPublicAPI API { get; private set; }
 
@@ -78,17 +80,18 @@ namespace Wox.Core.Plugin
         public static void LoadPlugins(PluginSettings settings)
         {
             _metadatas = PluginConfig.Parse(Directories);
-            Settings = settings;
+            Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             Settings.UpdatePluginSettings(_metadatas);
-            AllPlugins = PluginsLoader.Plugins(_metadatas, Settings);
+            AllPlugins = PluginsLoader.Plugins(_metadatas);
         }
 
         /// <summary>
         /// Call initialize for all plugins
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         public static void InitializePlugins(IPublicAPI api)
         {
-            API = api;
+            API = api ?? throw new ArgumentNullException(nameof(api));
             var failedPlugins = new ConcurrentQueue<PluginPair>();
             Parallel.ForEach(AllPlugins, pair =>
             {
@@ -103,11 +106,11 @@ namespace Wox.Core.Plugin
                         });
                     });
                     pair.Metadata.InitTime += milliseconds;
-                    Log.Info($"|PluginManager.InitializePlugins|Total init cost for <{pair.Metadata.Name}> is <{pair.Metadata.InitTime}ms>");
+                    Log.Info($"Total init cost for <{pair.Metadata.Name}> is <{pair.Metadata.InitTime}ms>", MethodBase.GetCurrentMethod().DeclaringType);
                 }
                 catch (Exception e)
                 {
-                    Log.Exception(nameof(PluginManager), $"Fail to Init plugin: {pair.Metadata.Name}", e);
+                    Log.Exception($"Fail to Init plugin: {pair.Metadata.Name}", e, MethodBase.GetCurrentMethod().DeclaringType);
                     pair.Metadata.Disabled = true;
                     failedPlugins.Enqueue(pair);
                 }
@@ -122,7 +125,7 @@ namespace Wox.Core.Plugin
                 }
 
                 // Plugins may have multiple ActionKeywords, eg. WebSearch
-                plugin.Metadata.ActionKeywords.Where(x => x != Query.GlobalPluginWildcardSign)
+                plugin.Metadata.GetActionKeywords().Where(x => x != Query.GlobalPluginWildcardSign)
                                                 .ToList()
                                                 .ForEach(x => NonGlobalPlugins[x] = plugin);
             }
@@ -141,6 +144,11 @@ namespace Wox.Core.Plugin
 
         public static List<PluginPair> ValidPluginsForQuery(Query query)
         {
+            if (query == null)
+            {
+                throw new ArgumentNullException(nameof(query));
+            }
+
             if (NonGlobalPlugins.ContainsKey(query.ActionKeyword))
             {
                 var plugin = NonGlobalPlugins[query.ActionKeyword];
@@ -152,8 +160,14 @@ namespace Wox.Core.Plugin
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         public static List<Result> QueryForPlugin(PluginPair pair, Query query, bool delayedExecution = false)
         {
+            if (pair == null)
+            {
+                throw new ArgumentNullException(nameof(pair));
+            }
+
             try
             {
                 List<Result> results = null;
@@ -172,21 +186,54 @@ namespace Wox.Core.Plugin
                     if (results != null)
                     {
                         UpdatePluginMetadata(results, metadata, query);
+                        UpdateResultWithActionKeyword(results, query);
                     }
                 });
+
                 metadata.QueryCount += 1;
                 metadata.AvgQueryTime = metadata.QueryCount == 1 ? milliseconds : (metadata.AvgQueryTime + milliseconds) / 2;
+
                 return results;
             }
             catch (Exception e)
             {
-                Log.Exception($"|PluginManager.QueryForPlugin|Exception for plugin <{pair.Metadata.Name}> when query <{query}>", e);
+                Log.Exception($"Exception for plugin <{pair.Metadata.Name}> when query <{query}>", e, MethodBase.GetCurrentMethod().DeclaringType);
+
                 return new List<Result>();
             }
         }
 
+        private static List<Result> UpdateResultWithActionKeyword(List<Result> results, Query query)
+        {
+            foreach (Result result in results)
+            {
+                if (string.IsNullOrEmpty(result.QueryTextDisplay))
+                {
+                    result.QueryTextDisplay = result.Title;
+                }
+
+                if (!string.IsNullOrEmpty(query.ActionKeyword))
+                {
+                    // Using CurrentCulture since this is user facing
+                    result.QueryTextDisplay = string.Format(CultureInfo.CurrentCulture, "{0} {1}", query.ActionKeyword, result.QueryTextDisplay);
+                }
+            }
+
+            return results;
+        }
+
         public static void UpdatePluginMetadata(List<Result> results, PluginMetadata metadata, Query query)
         {
+            if (results == null)
+            {
+                throw new ArgumentNullException(nameof(results));
+            }
+
+            if (metadata == null)
+            {
+                throw new ArgumentNullException(nameof(metadata));
+            }
+
             foreach (var r in results)
             {
                 r.PluginDirectory = metadata.PluginDirectory;
@@ -197,7 +244,7 @@ namespace Wox.Core.Plugin
 
         private static bool IsGlobalPlugin(PluginMetadata metadata)
         {
-            return metadata.ActionKeywords.Contains(Query.GlobalPluginWildcardSign);
+            return metadata.GetActionKeywords().Contains(Query.GlobalPluginWildcardSign);
         }
 
         /// <summary>
@@ -211,11 +258,11 @@ namespace Wox.Core.Plugin
         }
 
         public static IEnumerable<PluginPair> GetPluginsForInterface<T>()
-            where T : IFeatures
         {
             return AllPlugins.Where(p => p.Plugin is T);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         public static List<ContextMenuResult> GetContextMenusForPlugin(Result result)
         {
             var pluginPair = _contextMenuPlugins.FirstOrDefault(o => o.Metadata.ID == result.PluginID);
@@ -227,11 +274,13 @@ namespace Wox.Core.Plugin
                 try
                 {
                     var results = plugin.LoadContextMenus(result);
+
                     return results;
                 }
                 catch (Exception e)
                 {
-                    Log.Exception($"|PluginManager.GetContextMenusForPlugin|Can't load context menus for plugin <{metadata.Name}>", e);
+                    Log.Exception($"Can't load context menus for plugin <{metadata.Name}>", e, MethodBase.GetCurrentMethod().DeclaringType);
+
                     return new List<ContextMenuResult>();
                 }
             }
@@ -270,7 +319,7 @@ namespace Wox.Core.Plugin
                 NonGlobalPlugins[newActionKeyword] = plugin;
             }
 
-            plugin.Metadata.ActionKeywords.Add(newActionKeyword);
+            plugin.Metadata.GetActionKeywords().Add(newActionKeyword);
         }
 
         /// <summary>
@@ -282,7 +331,7 @@ namespace Wox.Core.Plugin
             var plugin = GetPluginForId(id);
             if (oldActionkeyword == Query.GlobalPluginWildcardSign
                 && // Plugins may have multiple ActionKeywords that are global, eg. WebSearch
-                plugin.Metadata.ActionKeywords
+                plugin.Metadata.GetActionKeywords()
                                     .Where(x => x == Query.GlobalPluginWildcardSign)
                                     .ToList()
                                     .Count == 1)
@@ -295,7 +344,7 @@ namespace Wox.Core.Plugin
                 NonGlobalPlugins.Remove(oldActionkeyword);
             }
 
-            plugin.Metadata.ActionKeywords.Remove(oldActionkeyword);
+            plugin.Metadata.GetActionKeywords().Remove(oldActionkeyword);
         }
 
         public static void ReplaceActionKeyword(string id, string oldActionKeyword, string newActionKeyword)

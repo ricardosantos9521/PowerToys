@@ -54,6 +54,8 @@ namespace FancyZonesEditor
         public const ushort _blankCustomModelId = 0xFFFA;
         public const ushort _lastDefinedId = _blankCustomModelId;
 
+        private const int MaxNegativeSpacing = -10;
+
         // Localizable strings
         private const string ErrorMessageBoxTitle = "FancyZones Editor Error";
         private const string ErrorParsingDeviceInfo = "Error parsing device info data.";
@@ -88,6 +90,7 @@ namespace FancyZonesEditor
         private const string EditorShowSpacingJsonTag = "editor-show-spacing";
         private const string EditorSpacingJsonTag = "editor-spacing";
         private const string EditorZoneCountJsonTag = "editor-zone-count";
+        private const string EditorSensitivityRadiusJsonTag = "editor-sensitivity-radius";
 
         private const string FocusJsonTag = "focus";
         private const string ColumnsJsonTag = "columns";
@@ -208,7 +211,7 @@ namespace FancyZonesEditor
             {
                 if (_spacing != value)
                 {
-                    _spacing = value;
+                    _spacing = Math.Max(MaxNegativeSpacing, value);
                     FirePropertyChanged();
                 }
             }
@@ -235,6 +238,26 @@ namespace FancyZonesEditor
         }
 
         private bool _showSpacing;
+
+        // SensitivityRadius - how much space inside the zone to highlight the adjacent zone too
+        public int SensitivityRadius
+        {
+            get
+            {
+                return _sensitivityRadius;
+            }
+
+            set
+            {
+                if (_sensitivityRadius != value)
+                {
+                    _sensitivityRadius = Math.Max(0, value);
+                    FirePropertyChanged();
+                }
+            }
+        }
+
+        private int _sensitivityRadius;
 
         // IsShiftKeyPressed - is the shift key currently being held down
         public bool IsShiftKeyPressed
@@ -381,15 +404,15 @@ namespace FancyZonesEditor
                 _gridModel.ColumnPercents.Add(((_multiplier * (col + 1)) / cols) - ((_multiplier * col) / cols));
             }
 
-            int index = ZoneCount - 1;
-            for (int col = cols - 1; col >= 0; col--)
+            int index = 0;
+            for (int row = 0; row < rows; row++)
             {
-                for (int row = rows - 1; row >= 0; row--)
+                for (int col = 0; col < cols; col++)
                 {
-                    _gridModel.CellChildMap[row, col] = index--;
-                    if (index < 0)
+                    _gridModel.CellChildMap[row, col] = index++;
+                    if (index == ZoneCount)
                     {
-                        index = 0;
+                        index--;
                     }
                 }
             }
@@ -435,6 +458,7 @@ namespace FancyZonesEditor
                     _showSpacing = true;
                     _spacing = 16;
                     _zoneCount = 3;
+                    _sensitivityRadius = 20;
                 }
                 else
                 {
@@ -463,6 +487,7 @@ namespace FancyZonesEditor
                     _showSpacing = jsonObject.GetProperty(EditorShowSpacingJsonTag).GetBoolean();
                     _spacing = jsonObject.GetProperty(EditorSpacingJsonTag).GetInt32();
                     _zoneCount = jsonObject.GetProperty(EditorZoneCountJsonTag).GetInt32();
+                    _sensitivityRadius = jsonObject.GetProperty(EditorSensitivityRadiusJsonTag).GetInt32();
                 }
             }
             catch (Exception ex)

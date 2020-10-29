@@ -6,9 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
-using Wox.Infrastructure.Logger;
 using Wox.Plugin;
+using Wox.Plugin.Logger;
 
 namespace Wox.Core.Plugin
 {
@@ -27,9 +28,11 @@ namespace Wox.Core.Plugin
             PluginMetadatas.Clear();
             var directories = pluginDirectories.SelectMany(Directory.GetDirectories);
             ParsePluginConfigs(directories);
+
             return PluginMetadatas;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         private static void ParsePluginConfigs(IEnumerable<string> directories)
         {
             // todo use linq when diable plugin is implemented since parallel.foreach + list is not thread saft
@@ -43,7 +46,7 @@ namespace Wox.Core.Plugin
                     }
                     catch (Exception e)
                     {
-                        Log.Exception($"|PluginConfig.ParsePLuginConfigs|Can't delete <{directory}>", e);
+                        Log.Exception($"Can't delete <{directory}>", e, MethodBase.GetCurrentMethod().DeclaringType);
                     }
                 }
                 else
@@ -57,12 +60,14 @@ namespace Wox.Core.Plugin
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         private static PluginMetadata GetPluginMetadata(string pluginDirectory)
         {
             string configPath = Path.Combine(pluginDirectory, PluginConfigName);
             if (!File.Exists(configPath))
             {
-                Log.Error($"|PluginConfig.GetPluginMetadata|Didn't find config file <{configPath}>");
+                Log.Error($"Didn't find config file <{configPath}>", MethodBase.GetCurrentMethod().DeclaringType);
+
                 return null;
             }
 
@@ -73,26 +78,26 @@ namespace Wox.Core.Plugin
                 metadata.PluginDirectory = pluginDirectory;
 
                 // for plugins which doesn't has ActionKeywords key
-                metadata.ActionKeywords = metadata.ActionKeywords ?? new List<string> { metadata.ActionKeyword };
+                metadata.SetActionKeywords(metadata.GetActionKeywords() ?? new List<string> { metadata.ActionKeyword });
 
                 // for plugin still use old ActionKeyword
-                metadata.ActionKeyword = metadata.ActionKeywords?[0];
+                metadata.ActionKeyword = metadata.GetActionKeywords()?[0];
             }
             catch (Exception e)
             {
-                Log.Exception($"|PluginConfig.GetPluginMetadata|invalid json for config <{configPath}>", e);
+                Log.Exception($"|PluginConfig.GetPluginMetadata|invalid json for config <{configPath}>", e, MethodBase.GetCurrentMethod().DeclaringType);
                 return null;
             }
 
             if (!AllowedLanguage.IsAllowed(metadata.Language))
             {
-                Log.Error($"|PluginConfig.GetPluginMetadata|Invalid language <{metadata.Language}> for config <{configPath}>");
+                Log.Error($"|PluginConfig.GetPluginMetadata|Invalid language <{metadata.Language}> for config <{configPath}>", MethodBase.GetCurrentMethod().DeclaringType);
                 return null;
             }
 
             if (!File.Exists(metadata.ExecuteFilePath))
             {
-                Log.Error($"|PluginConfig.GetPluginMetadata|execute file path didn't exist <{metadata.ExecuteFilePath}> for config <{configPath}");
+                Log.Error($"|PluginConfig.GetPluginMetadata|execute file path didn't exist <{metadata.ExecuteFilePath}> for config <{configPath}", MethodBase.GetCurrentMethod().DeclaringType);
                 return null;
             }
 

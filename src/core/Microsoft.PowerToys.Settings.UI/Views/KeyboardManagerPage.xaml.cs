@@ -5,9 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Microsoft.PowerToys.Settings.UI.Lib;
-using Microsoft.PowerToys.Settings.UI.Lib.Utilities;
-using Microsoft.PowerToys.Settings.UI.Lib.ViewModels;
+using Microsoft.PowerToys.Settings.UI.Library;
+using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Microsoft.PowerToys.Settings.UI.Library.ViewModels;
 using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -31,7 +31,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             dispatcher = Window.Current.Dispatcher;
 
-            ViewModel = new KeyboardManagerViewModel(ShellPage.SendDefaultIPCMessage, FilterRemapKeysList);
+            var settingsUtils = new SettingsUtils(new SystemIOProvider());
+            ViewModel = new KeyboardManagerViewModel(settingsUtils, SettingsRepository<GeneralSettings>.GetInstance(settingsUtils), ShellPage.SendDefaultIPCMessage, FilterRemapKeysList);
 
             watcher = Helper.GetFileWatcher(
                 PowerToyName,
