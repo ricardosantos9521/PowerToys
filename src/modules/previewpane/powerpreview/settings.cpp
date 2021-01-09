@@ -11,15 +11,29 @@ namespace PowerPreviewSettings
 {
     extern "C" IMAGE_DOS_HEADER __ImageBase;
 
+    // Relative(HKLM/HKCU) sub key path of Preview Handlers list in registry.
+    static LPCWSTR preview_handlers_subkey = L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers";
+
+    // Relative HKCR sub key path of SVG thumbnail provider in registry
+    static LPCWSTR svg_thumbnail_provider_subkey = L".svg\\shellex\\{E357FCCD-A995-4576-B01F-234630154E96}";
+
     // Base Settings Class Implementation
-    FileExplorerPreviewSettings::FileExplorerPreviewSettings(bool toggleSettingEnabled, const std::wstring& toggleSettingName, const std::wstring& toggleSettingDescription, LPCWSTR clsid, const std::wstring& registryValueData, std::unique_ptr<RegistryWrapperIface> registryWrapper) :
+    FileExplorerPreviewSettings::FileExplorerPreviewSettings(bool toggleSettingEnabled, const std::wstring& toggleSettingName, const std::wstring& toggleSettingDescription, LPCWSTR clsid, const std::wstring& registryValueData, RegistryWrapperIface* registryWrapper) :
         m_toggleSettingEnabled(toggleSettingEnabled),
         m_toggleSettingName(toggleSettingName),
         m_toggleSettingDescription(toggleSettingDescription),
         m_clsid(clsid),
         m_registryValueData(registryValueData),
-        m_registryWrapper(std::move(registryWrapper))
+        m_registryWrapper(registryWrapper)
     {
+    }
+
+    FileExplorerPreviewSettings::~FileExplorerPreviewSettings() 
+    {
+        if (this->m_registryWrapper != NULL)
+        {
+            delete this->m_registryWrapper;
+        }
     }
 
     bool FileExplorerPreviewSettings::GetToggleSettingState() const
@@ -52,7 +66,7 @@ namespace PowerPreviewSettings
         return this->m_registryValueData;
     }
 
-    // Load initial state of the file explorer module. If no inital state present initialize setting with default value.
+    // Load initial state of the Preview Handler. If no inital state present initialize setting with default value.
     void FileExplorerPreviewSettings::LoadState(PowerToysSettings::PowerToyValues& settings)
     {
         auto toggle = settings.get_bool_value(this->GetToggleSettingName());
@@ -63,8 +77,8 @@ namespace PowerPreviewSettings
         }
     }
 
-    // Manage change in state of file explorer module settings.
-    bool FileExplorerPreviewSettings::UpdateState(PowerToysSettings::PowerToyValues& settings, bool enabled, bool isElevated)
+    // Manage change in state of Preview Handler settings.
+    void FileExplorerPreviewSettings::UpdateState(PowerToysSettings::PowerToyValues& settings, bool enabled)
     {
         auto toggle = settings.get_bool_value(this->GetToggleSettingName());
         if (toggle)
@@ -75,40 +89,27 @@ namespace PowerPreviewSettings
             {
                 this->UpdateToggleSettingState(newState);
 
-                // If global setting is enable. Add or remove the file explorer module otherwise just change the UI and save the updated config.
+                // If global setting is enable. Add or remove the preview handler otherwise just change the UI and save the updated config.
                 if (enabled)
                 {
-                    // Check if the registry state does not match the new state, registry needs to be modified
-                    if (this->CheckRegistryState() != newState)
+                    LONG err;
+                    if (lastState)
                     {
-                        if (isElevated)
-                        {
-                            LONG err;
-                            if (lastState)
-                            {
-                                err = this->Disable();
-                            }
-                            else
-                            {
-                                err = this->Enable();
-                            }
-
-                            if (err == ERROR_SUCCESS)
-                            {
-                                Trace::PowerPreviewSettingsUpdated(this->GetToggleSettingName().c_str(), lastState, newState, enabled);
-                            }
-                            else
-                            {
-                                Trace::PowerPreviewSettingsUpdateFailed(this->GetToggleSettingName().c_str(), lastState, newState, enabled);
-                            }
-                        }
-                        // If process is not elevated, return false as it is not possible to update the registry
-                        else
-                        {
-                            return false;
-                        }
+                        err = this->DisablePreview();
                     }
-                    // If it matches the new state, no update to registry is required
+                    else
+                    {
+                        err = this->EnablePreview();
+                    }
+
+                    if (err == ERROR_SUCCESS)
+                    {
+                        Trace::PowerPreviewSettingsUpdated(this->GetToggleSettingName().c_str(), lastState, newState, enabled);
+                    }
+                    else
+                    {
+                        Trace::PowerPreviewSettingsUpdateFailed(this->GetToggleSettingName().c_str(), lastState, newState, enabled);
+                    }
                 }
                 else
                 {
@@ -116,7 +117,29 @@ namespace PowerPreviewSettings
                 }
             }
         }
+    }
 
-        return true;
+    LONG FileExplorerPreviewSettings::EnablePreview()
+    {
+        // Add registry value to enable preview.
+        return this->m_registryWrapper->SetRegistryValue(HKEY_CURRENT_USER, preview_handlers_subkey, this->GetCLSID(), REG_SZ, (LPBYTE)this->GetRegistryValueData().c_str(), (DWORD)(this->GetRegistryValueData().length() * sizeof(wchar_t)));
+    }
+
+    LONG FileExplorerPreviewSettings::DisablePreview()
+    {
+        // Delete the registry key to disable preview.
+        return this->m_registryWrapper->DeleteRegistryValue(HKEY_CURRENT_USER, preview_handlers_subkey, this->GetCLSID());
+    }
+
+    LONG FileExplorerPreviewSettings::EnableThumbnailProvider()
+    {
+        // Add registry value to enable thumbnail provider.
+        return this->m_registryWrapper->SetRegistryValue(HKEY_CURRENT_USER, svg_thumbnail_provider_subkey, this->GetCLSID(), REG_SZ, (LPBYTE)this->GetRegistryValueData().c_str(), (DWORD)(this->GetRegistryValueData().length() * sizeof(wchar_t)));
+    }
+
+    LONG FileExplorerPreviewSettings::DisableThumbnailProvider()
+    {
+        // Delete the registry key to disable thumbnail provider.
+        return this->m_registryWrapper->DeleteRegistryValue(HKEY_CURRENT_USER, svg_thumbnail_provider_subkey, this->GetCLSID());
     }
 }

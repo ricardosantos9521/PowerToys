@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -35,6 +34,12 @@ namespace Microsoft.Plugin.WindowWalker.Components
         private static readonly Dictionary<IntPtr, string> _handlesToProcessCache = new Dictionary<IntPtr, string>();
 
         /// <summary>
+        /// The list of icons from process so that we don't have to keep
+        /// loading them from disk
+        /// </summary>
+        private static readonly Dictionary<uint, ImageSource> _processIdsToIconsCache = new Dictionary<uint, ImageSource>();
+
+        /// <summary>
         /// The handle to the window
         /// </summary>
         private readonly IntPtr hwnd;
@@ -46,16 +51,11 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                int sizeOfTitle = NativeMethods.GetWindowTextLength(hwnd);
+                int sizeOfTitle = InteropAndHelpers.GetWindowTextLength(hwnd);
                 if (sizeOfTitle++ > 0)
                 {
                     StringBuilder titleBuffer = new StringBuilder(sizeOfTitle);
-                    var numCharactersWritten = NativeMethods.GetWindowText(hwnd, titleBuffer, sizeOfTitle);
-                    if (numCharactersWritten == 0)
-                    {
-                        return string.Empty;
-                    }
-
+                    InteropAndHelpers.GetWindowText(hwnd, titleBuffer, sizeOfTitle);
                     return titleBuffer.ToString();
                 }
                 else
@@ -106,11 +106,11 @@ namespace Microsoft.Plugin.WindowWalker.Components
                         }
                     }
 
-                    if (_handlesToProcessCache[hwnd].ToUpperInvariant() == "APPLICATIONFRAMEHOST.EXE")
+                    if (_handlesToProcessCache[hwnd].ToLower() == "applicationframehost.exe")
                     {
                         new Task(() =>
                         {
-                            NativeMethods.CallBackPtr callbackptr = new NativeMethods.CallBackPtr((IntPtr hwnd, IntPtr lParam) =>
+                            InteropAndHelpers.CallBackPtr callbackptr = new InteropAndHelpers.CallBackPtr((IntPtr hwnd, IntPtr lParam) =>
                             {
                                 var childProcessId = GetProcessIDFromWindowHandle(hwnd);
                                 if (childProcessId != ProcessID)
@@ -123,7 +123,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
                                     return true;
                                 }
                             });
-                            _ = NativeMethods.EnumChildWindows(Hwnd, callbackptr, 0);
+                            InteropAndHelpers.EnumChildWindows(Hwnd, callbackptr, 0);
                         }).Start();
                     }
 
@@ -140,14 +140,43 @@ namespace Microsoft.Plugin.WindowWalker.Components
             get
             {
                 StringBuilder windowClassName = new StringBuilder(300);
-                var numCharactersWritten = NativeMethods.GetClassName(Hwnd, windowClassName, windowClassName.MaxCapacity);
-
-                if (numCharactersWritten == 0)
-                {
-                    return string.Empty;
-                }
+                InteropAndHelpers.GetClassName(Hwnd, windowClassName, windowClassName.MaxCapacity);
 
                 return windowClassName.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Gets represents the Window Icon for the specified window
+        /// </summary>
+        public ImageSource WindowIcon
+        {
+            get
+            {
+                lock (_processIdsToIconsCache)
+                {
+                    InteropAndHelpers.GetWindowThreadProcessId(Hwnd, out uint processId);
+
+                    if (!_processIdsToIconsCache.ContainsKey(processId))
+                    {
+                        try
+                        {
+                            Process process = Process.GetProcessById((int)processId);
+                            Icon tempIcon = Icon.ExtractAssociatedIcon(process.Modules[0].FileName);
+                            _processIdsToIconsCache.Add(processId, Imaging.CreateBitmapSourceFromHIcon(
+                                tempIcon.Handle,
+                                Int32Rect.Empty,
+                                BitmapSizeOptions.FromEmptyOptions()));
+                        }
+                        catch
+                        {
+                            BitmapImage failedImage = new BitmapImage(new Uri(@"Images\failedIcon.jpg", UriKind.Relative));
+                            _processIdsToIconsCache.Add(processId, failedImage);
+                        }
+                    }
+
+                    return _processIdsToIconsCache[processId];
+                }
             }
         }
 
@@ -158,7 +187,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return NativeMethods.IsWindowVisible(Hwnd);
+                return InteropAndHelpers.IsWindowVisible(Hwnd);
             }
         }
 
@@ -169,7 +198,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return NativeMethods.IsWindow(Hwnd);
+                return InteropAndHelpers.IsWindow(Hwnd);
             }
         }
 
@@ -180,9 +209,9 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return (NativeMethods.GetWindowLong(Hwnd, NativeMethods.GWL_EXSTYLE) &
-                    (uint)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW) ==
-                    (uint)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
+                return (InteropAndHelpers.GetWindowLong(Hwnd, InteropAndHelpers.GWL_EXSTYLE) &
+                    (uint)InteropAndHelpers.ExtendedWindowStyles.WS_EX_TOOLWINDOW) ==
+                    (uint)InteropAndHelpers.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
             }
         }
 
@@ -193,9 +222,9 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return (NativeMethods.GetWindowLong(Hwnd, NativeMethods.GWL_EXSTYLE) &
-                    (uint)NativeMethods.ExtendedWindowStyles.WS_EX_APPWINDOW) ==
-                    (uint)NativeMethods.ExtendedWindowStyles.WS_EX_APPWINDOW;
+                return (InteropAndHelpers.GetWindowLong(Hwnd, InteropAndHelpers.GWL_EXSTYLE) &
+                    (uint)InteropAndHelpers.ExtendedWindowStyles.WS_EX_APPWINDOW) ==
+                    (uint)InteropAndHelpers.ExtendedWindowStyles.WS_EX_APPWINDOW;
             }
         }
 
@@ -206,7 +235,18 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return NativeMethods.GetProp(Hwnd, "ITaskList_Deleted") != IntPtr.Zero;
+                return InteropAndHelpers.GetProp(Hwnd, "ITaskList_Deleted") != IntPtr.Zero;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether get a value indicating whether the app is a cloaked UWP app
+        /// </summary>
+        public bool IsUWPCloaked
+        {
+            get
+            {
+                return IsWindowCloaked() && ClassName == "ApplicationFrameWindow";
             }
         }
 
@@ -217,8 +257,19 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             get
             {
-                return NativeMethods.GetWindow(Hwnd, NativeMethods.GetWindowCmd.GW_OWNER) != null;
+                return InteropAndHelpers.GetWindow(Hwnd, InteropAndHelpers.GetWindowCmd.GW_OWNER) != null;
             }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether is the window cloaked. To detect UWP apps in background or win32 apps running in another virtual desktop
+        /// </summary>
+        public bool IsWindowCloaked()
+        {
+            int isCloaked = 0;
+            const int DWMWA_CLOAKED = 14;
+            InteropAndHelpers.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out isCloaked, sizeof(int));
+            return isCloaked != 0;
         }
 
         /// <summary>
@@ -244,6 +295,14 @@ namespace Microsoft.Plugin.WindowWalker.Components
         }
 
         /// <summary>
+        /// Highlights a window to help the user identify the window that has been selected
+        /// </summary>
+        public void HighlightWindow()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Switches desktop focus to the window
         /// </summary>
         public void SwitchToWindow()
@@ -252,16 +311,16 @@ namespace Microsoft.Plugin.WindowWalker.Components
             // 1) There is a weird flashing behavior when trying
             //    to use ShowWindow for switching tabs in IE
             // 2) SetForegroundWindow fails on minimized windows
-            if (ProcessName.ToUpperInvariant().Equals("IEXPLORE.EXE", StringComparison.Ordinal) || !Minimized)
+            if (ProcessName.ToLower().Equals("iexplore.exe") || !Minimized)
             {
-                NativeMethods.SetForegroundWindow(Hwnd);
+                InteropAndHelpers.SetForegroundWindow(Hwnd);
             }
             else
             {
-                NativeMethods.ShowWindow(Hwnd, NativeMethods.ShowWindowCommands.Restore);
+                InteropAndHelpers.ShowWindow(Hwnd, InteropAndHelpers.ShowWindowCommands.Restore);
             }
 
-            NativeMethods.FlashWindow(Hwnd, true);
+            InteropAndHelpers.FlashWindow(Hwnd, true);
         }
 
         /// <summary>
@@ -270,7 +329,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <returns>The title of the window</returns>
         public override string ToString()
         {
-            return Title + " (" + ProcessName.ToUpper(CultureInfo.CurrentCulture) + ")";
+            return Title + " (" + ProcessName.ToUpper() + ")";
         }
 
         /// <summary>
@@ -279,16 +338,16 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <returns>The state (minimized, maximized, etc..) of the window</returns>
         public WindowSizeState GetWindowSizeState()
         {
-            NativeMethods.GetWindowPlacement(Hwnd, out NativeMethods.WINDOWPLACEMENT placement);
+            InteropAndHelpers.GetWindowPlacement(Hwnd, out InteropAndHelpers.WINDOWPLACEMENT placement);
 
             switch (placement.ShowCmd)
             {
-                case NativeMethods.ShowWindowCommands.Normal:
+                case InteropAndHelpers.ShowWindowCommands.Normal:
                     return WindowSizeState.Normal;
-                case NativeMethods.ShowWindowCommands.Minimize:
-                case NativeMethods.ShowWindowCommands.ShowMinimized:
+                case InteropAndHelpers.ShowWindowCommands.Minimize:
+                case InteropAndHelpers.ShowWindowCommands.ShowMinimized:
                     return WindowSizeState.Minimized;
-                case NativeMethods.ShowWindowCommands.Maximize: // No need for ShowMaximized here since its also of value 3
+                case InteropAndHelpers.ShowWindowCommands.Maximize: // No need for ShowMaximized here since its also of value 3
                     return WindowSizeState.Maximized;
                 default:
                     // throw new Exception("Don't know how to handle window state = " + placement.ShowCmd);
@@ -316,10 +375,10 @@ namespace Microsoft.Plugin.WindowWalker.Components
         {
             uint processId = GetProcessIDFromWindowHandle(hwnd);
             ProcessID = processId;
-            IntPtr processHandle = NativeMethods.OpenProcess(NativeMethods.ProcessAccessFlags.AllAccess, true, (int)processId);
+            IntPtr processHandle = InteropAndHelpers.OpenProcess(InteropAndHelpers.ProcessAccessFlags.AllAccess, true, (int)processId);
             StringBuilder processName = new StringBuilder(MaximumFileNameLength);
 
-            if (NativeMethods.GetProcessImageFileName(processHandle, processName, MaximumFileNameLength) != 0)
+            if (InteropAndHelpers.GetProcessImageFileName(processHandle, processName, MaximumFileNameLength) != 0)
             {
                 return processName.ToString().Split('\\').Reverse().ToArray()[0];
             }
@@ -334,9 +393,9 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// </summary>
         /// <param name="hwnd">The handle to the window</param>
         /// <returns>The process ID</returns>
-        private static uint GetProcessIDFromWindowHandle(IntPtr hwnd)
+        private uint GetProcessIDFromWindowHandle(IntPtr hwnd)
         {
-            _ = NativeMethods.GetWindowThreadProcessId(hwnd, out uint processId);
+            InteropAndHelpers.GetWindowThreadProcessId(hwnd, out uint processId);
             return processId;
         }
     }

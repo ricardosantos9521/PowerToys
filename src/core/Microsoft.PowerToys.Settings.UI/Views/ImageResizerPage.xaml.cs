@@ -2,10 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Linq;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels;
+using Microsoft.PowerToys.Settings.UI.Lib.ViewModels;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
@@ -18,8 +15,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         public ImageResizerPage()
         {
             InitializeComponent();
-            var settingsUtils = new SettingsUtils(new SystemIOProvider());
-            ViewModel = new ImageResizerViewModel(settingsUtils, SettingsRepository<GeneralSettings>.GetInstance(settingsUtils), ShellPage.SendDefaultIPCMessage);
+
+            ViewModel = new ImageResizerViewModel(ShellPage.SendDefaultIPCMessage);
             DataContext = ViewModel;
         }
 
@@ -44,19 +41,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
             catch
             {
-            }
-        }
-
-        private void ImagesSizesListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
-        {
-            if (ViewModel.IsListViewFocusRequested)
-            {
-                // Set focus to the last item in the ListView
-                int size = ImagesSizesListView.Items.Count;
-                ((ListViewItem)ImagesSizesListView.ContainerFromIndex(size - 1)).Focus(FocusState.Programmatic);
-
-                // Reset the focus requested flag
-                ViewModel.IsListViewFocusRequested = false;
             }
         }
     }

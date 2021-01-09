@@ -45,9 +45,6 @@ private:
     // The PowerToy name that will be shown in the settings.
     const std::wstring app_name = GET_RESOURCE_STRING(IDS_KEYBOARDMANAGER);
 
-    //contains the non localized key of the powertoy
-    std::wstring app_key = KeyboardManagerConstants::ModuleName;
-
     // Low level hook handles
     static HHOOK hook_handle;
 
@@ -80,7 +77,7 @@ public:
         try
         {
             PowerToysSettings::PowerToyValues settings =
-                PowerToysSettings::PowerToyValues::load_from_settings_file(get_key());
+                PowerToysSettings::PowerToyValues::load_from_settings_file(get_name());
             auto current_config = settings.get_string_value(KeyboardManagerConstants::ActiveConfigurationSettingName);
 
             if (current_config)
@@ -230,16 +227,10 @@ public:
         delete this;
     }
 
-    // Return the localized display name of the powertoy
+    // Return the display name of the powertoy, this will be cached by the runner
     virtual const wchar_t* get_name() override
     {
         return app_name.c_str();
-    }
-
-    // Return the non localized key of the powertoy, this will be cached by the runner
-    virtual const wchar_t* get_key() override
-    {
-        return app_key.c_str();
     }
 
     // Return JSON with the configuration options.
@@ -295,7 +286,7 @@ public:
         {
             // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+                PowerToysSettings::PowerToyValues::from_json_string(config);
 
             // If you don't need to do any custom processing of the settings, proceed
             // to persists the values calling:
@@ -372,10 +363,7 @@ public:
             hook_handle_copy = hook_handle;
             if (!hook_handle)
             {
-                DWORD errorCode = GetLastError();
-                show_last_error_message(L"SetWindowsHookEx", errorCode, L"PowerToys - Keyboard Manager");
-                auto errorMessage = get_last_error_message(errorCode);
-                Trace::Error(errorCode, errorMessage.has_value() ? errorMessage.value() : L"", L"start_lowlevel_keyboard_hook.SetWindowsHookEx");
+                throw std::runtime_error("Cannot install keyboard listener");
             }
         }
     }
@@ -393,12 +381,6 @@ public:
     // Function called by the hook procedure to handle the events. This is the starting point function for remapping
     intptr_t HandleKeyboardHookEvent(LowlevelKeyboardEvent* data) noexcept
     {
-        // If remappings are disabled (due to the remap tables getting updated) skip the rest of the hook
-        if (!keyboardManagerState.AreRemappingsEnabled())
-        {
-            return 0;
-        }
-
         // If key has suppress flag, then suppress it
         if (data->lParam->dwExtraInfo == KeyboardManagerConstants::KEYBOARDMANAGER_SUPPRESS_FLAG)
         {
@@ -447,11 +429,8 @@ public:
             return 0;
         }
 
-        /* This feature has not been enabled (code from proof of concept stage)
-        * 
         //// Remap a key to behave like a modifier instead of a toggle
         //intptr_t SingleKeyToggleToModResult = KeyboardEventHandlers::HandleSingleKeyToggleToModEvent(inputHandler, data, keyboardManagerState);
-        */
 
         // Handle an app-specific shortcut remapping
         intptr_t AppSpecificShortcutRemapResult = KeyboardEventHandlers::HandleAppSpecificShortcutRemapEvent(inputHandler, data, keyboardManagerState);

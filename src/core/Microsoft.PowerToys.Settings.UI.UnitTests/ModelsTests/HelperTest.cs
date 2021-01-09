@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Microsoft.PowerToys.Settings.UI.Lib.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CommonLibTest
@@ -24,7 +24,7 @@ namespace CommonLibTest
         }
 
         [TestMethod]
-        public void HelperCompareVersionsShouldBeEqualWhenSuccessful()
+        public void Helper_CompareVersions_ShouldBeEqual_WhenSuccessful()
         {
             TestStringsAreEqual("v0.0.0", "v0.0.0");
             TestStringsAreEqual("v0.1.1", "v0.1.1");
@@ -33,7 +33,7 @@ namespace CommonLibTest
         }
 
         [TestMethod]
-        public void HelperCompareVersionsShouldBeSmallerWhenSuccessful()
+        public void Helper_CompareVersions_ShouldBeSmaller_WhenSuccessful()
         {
             TestStringIsSmaller("v0.0.0", "v0.0.1");
             TestStringIsSmaller("v0.0.0", "v0.1.0");
@@ -47,28 +47,28 @@ namespace CommonLibTest
 
         [TestMethod]
         [ExpectedException(typeof(FormatException))]
-        public void HelperCompareVersionsShouldThrowBadFormatWhenNoVersionString()
+        public void Helper_CompareVersions_ShouldThrowBadFormat_WhenNoVersionString()
         {
             Helper.CompareVersions("v0.0.1", string.Empty);
         }
 
         [TestMethod]
         [ExpectedException(typeof(FormatException))]
-        public void HelperCompareVersionsShouldThrowBadFormatWhenShortVersionString()
+        public void Helper_CompareVersions_ShouldThrowBadFormat_WhenShortVersionString()
         {
             Helper.CompareVersions("v0.0.1", "v0.1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(FormatException))]
-        public void HelperCompareVersionsShouldThrowBadFormatWhenLongVersionString()
+        public void Helper_CompareVersions_ShouldThrowBadFormat_WhenLongVersionString()
         {
             Helper.CompareVersions("v0.0.1", "v0.0.0.1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(FormatException))]
-        public void HelperCompareVersionsShouldThrowBadFormatWhenItIsNotAVersionString()
+        public void Helper_CompareVersions_ShouldThrowBadFormat_WhenItIsNotAVersionString()
         {
             Helper.CompareVersions("v0.0.1", "HelloWorld");
         }

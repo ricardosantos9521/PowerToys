@@ -8,13 +8,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using ImageResizer.Helpers;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using ImageResizer.Models;
 using ImageResizer.Views;
 
 namespace ImageResizer.ViewModels
 {
-    public class ProgressViewModel : Observable, IDisposable
+    public class ProgressViewModel : ViewModelBase
     {
         private readonly MainViewModel _mainViewModel;
         private readonly ResizeBatch _batch;
@@ -24,7 +25,6 @@ namespace ImageResizer.ViewModels
 
         private double _progress;
         private TimeSpan _timeRemaining;
-        private bool disposedValue;
 
         public ProgressViewModel(
             ResizeBatch batch,
@@ -42,13 +42,13 @@ namespace ImageResizer.ViewModels
         public double Progress
         {
             get => _progress;
-            set => Set(ref _progress, value);
+            set => Set(nameof(Progress), ref _progress, value);
         }
 
         public TimeSpan TimeRemaining
         {
             get => _timeRemaining;
-            set => Set(ref _timeRemaining, value);
+            set => Set(nameof(TimeRemaining), ref _timeRemaining, value);
         }
 
         public ICommand StartCommand { get; }
@@ -56,61 +56,37 @@ namespace ImageResizer.ViewModels
         public ICommand StopCommand { get; }
 
         public void Start()
-        {
-            _ = Task.Factory.StartNew(StartExecutingWork, _cancellationTokenSource.Token, TaskCreationOptions.None, TaskScheduler.Current);
-        }
-
-        private void StartExecutingWork()
-        {
-            _stopwatch.Restart();
-            var errors = _batch.Process(
-                (completed, total) =>
+            => Task.Factory.StartNew(
+                () =>
                 {
-                    var progress = completed / total;
-                    Progress = progress;
-                    _mainViewModel.Progress = progress;
+                    _stopwatch.Restart();
+                    var errors = _batch.Process(
+                        _cancellationTokenSource.Token,
+                        (completed, total) =>
+                        {
+                            var progress = completed / total;
+                            Progress = progress;
+                            _mainViewModel.Progress = progress;
 
-                    TimeRemaining = _stopwatch.Elapsed.Multiply((total - completed) / completed);
+                            TimeRemaining = _stopwatch.Elapsed.Multiply((total - completed) / completed);
+                        });
+
+                    if (errors.Any())
+                    {
+                        _mainViewModel.Progress = 0;
+                        _mainViewModel.CurrentPage = new ResultsViewModel(_mainView, errors);
+                    }
+                    else
+                    {
+                        _mainView.Close();
+                    }
                 },
                 _cancellationTokenSource.Token);
-
-            if (errors.Any())
-            {
-                _mainViewModel.Progress = 0;
-                _mainViewModel.CurrentPage = new ResultsViewModel(_mainView, errors);
-            }
-            else
-            {
-                _mainView.Close();
-            }
-        }
 
         public void Stop()
         {
             _cancellationTokenSource.Cancel();
             _mainView.Close();
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    _cancellationTokenSource.Dispose();
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
     }
 }

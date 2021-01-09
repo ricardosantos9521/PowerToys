@@ -3,12 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.UnitTests.Mocks;
+using Microsoft.PowerToys.Settings.UI.Lib;
 using Microsoft.PowerToys.Settings.UnitTest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
 
@@ -21,16 +18,9 @@ namespace CommonLibTest
         // https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-migrate-from-newtonsoft-how-to.
         // Test also fails when the attributes are not initialized i.e they have null values.
         [TestMethod]
-        [ObsoleteAttribute("This test method is obsolete.", true)]
-        public void ToJsonStringShouldReturnValidJSONOfModelWhenSuccessful()
+        [Obsolete]
+        public void ToJsonString_ShouldReturnValidJSONOfModel_WhenSuccessful()
         {
-            //Mock Disk access
-            string saveContent = string.Empty;
-            string savePath = string.Empty;
-            var mockIOProvider = IIOProviderMocks.GetMockIOProviderForSaveLoadExists();
-
-            var settingsUtils = new SettingsUtils(mockIOProvider.Object);
-
             // Arrange
             string file_name = "test\\BasePTModuleSettingsTest";
             string expectedSchemaText = @"
@@ -49,11 +39,11 @@ namespace CommonLibTest
                 }";
 
             string testSettingsConfigs = new BasePTSettingsTest().ToJsonString();
-            settingsUtils.SaveSettings(testSettingsConfigs, file_name);
+            SettingsUtils.SaveSettings(testSettingsConfigs, file_name);
             JsonSchema expectedSchema = JsonSchema.Parse(expectedSchemaText);
 
             // Act
-            JObject actualSchema = JObject.Parse(settingsUtils.GetSettings<BasePTSettingsTest>(file_name).ToJsonString());
+            JObject actualSchema = JObject.Parse(SettingsUtils.GetSettings<BasePTSettingsTest>(file_name).ToJsonString());
             bool valid = actualSchema.IsValid(expectedSchema);
 
             // Assert

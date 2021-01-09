@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include <common/common.h>
-#include <common/on_thread_executor.h>
 
 #include "FancyZonesData.h"
 #include "FancyZonesDataTypes.h"
@@ -27,26 +26,24 @@ using namespace FancyZonesUtils;
 
 namespace ZoneWindowUtils
 {
-    std::wstring GenerateUniqueId(HMONITOR monitor, const std::wstring& deviceId, const std::wstring& virtualDesktopId)
+    std::wstring GenerateUniqueId(HMONITOR monitor, PCWSTR deviceId, PCWSTR virtualDesktopId)
     {
+        wchar_t uniqueId[256]{}; // Parsed deviceId + resolution + virtualDesktopId
+
         MONITORINFOEXW mi;
         mi.cbSize = sizeof(mi);
-        if (!virtualDesktopId.empty() && GetMonitorInfo(monitor, &mi))
+        if (virtualDesktopId && GetMonitorInfo(monitor, &mi))
         {
+            wchar_t parsedId[256]{};
+            ParseDeviceId(deviceId, parsedId, 256);
+
             Rect const monitorRect(mi.rcMonitor);
-            // Unique identifier format: <parsed-device-id>_<width>_<height>_<virtual-desktop-id>
-            return ParseDeviceId(deviceId) +
-                   L'_' +
-                   std::to_wstring(monitorRect.width()) +
-                   L'_' +
-                   std::to_wstring(monitorRect.height()) +
-                   L'_' +
-                   virtualDesktopId;
+            StringCchPrintf(uniqueId, ARRAYSIZE(uniqueId), L"%s_%d_%d_%s", parsedId, monitorRect.width(), monitorRect.height(), virtualDesktopId);
         }
-        return {};
+        return std::wstring{ uniqueId };
     }
 
-    std::wstring GenerateUniqueIdAllMonitorsArea(const std::wstring& virtualDesktopId)
+    std::wstring GenerateUniqueIdAllMonitorsArea(PCWSTR virtualDesktopId)
     {
         std::wstring result{ ZonedWindowProperties::MultiMonitorDeviceID };
 
@@ -60,54 +57,6 @@ namespace ZoneWindowUtils
         result += virtualDesktopId;
 
         return result;
-    }
-
-    void PaintZoneWindow(HDC hdc,
-                         HWND window,
-                         bool hasActiveZoneSet,
-                         COLORREF hostZoneColor,
-                         COLORREF hostZoneBorderColor,
-                         COLORREF hostZoneHighlightColor,
-                         int hostZoneHighlightOpacity,
-                         IZoneSet::ZonesMap zones,
-                         std::vector<size_t> highlightZone,
-                         bool flashMode)
-    {
-        PAINTSTRUCT ps;
-        HDC oldHdc = hdc;
-        if (!hdc)
-        {
-            hdc = BeginPaint(window, &ps);
-        }
-
-        RECT clientRect;
-        GetClientRect(window, &clientRect);
-
-        wil::unique_hdc hdcMem;
-        HPAINTBUFFER bufferedPaint = BeginBufferedPaint(hdc, &clientRect, BPBF_TOPDOWNDIB, nullptr, &hdcMem);
-        if (bufferedPaint)
-        {
-            ZoneWindowDrawing::DrawBackdrop(hdcMem, clientRect);
-
-            if (hasActiveZoneSet)
-            {
-                ZoneWindowDrawing::DrawActiveZoneSet(hdcMem,
-                                                     hostZoneColor,
-                                                     hostZoneBorderColor,
-                                                     hostZoneHighlightColor,
-                                                     hostZoneHighlightOpacity,
-                                                     zones,
-                                                     highlightZone,
-                                                     flashMode);
-            }
-
-            EndBufferedPaint(bufferedPaint, TRUE);
-        }
-
-        if (!oldHdc)
-        {
-            EndPaint(window, &ps);
-        }
     }
 }
 
@@ -130,8 +79,6 @@ public:
     MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, bool cycle) noexcept;
     IFACEMETHODIMP_(bool)
     MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, bool cycle) noexcept;
-    IFACEMETHODIMP_(bool)
-    ExtendWindowByDirectionAndPosition(HWND window, DWORD vkCode) noexcept;
     IFACEMETHODIMP_(void)
     CycleActiveZoneSet(DWORD vkCode) noexcept;
     IFACEMETHODIMP_(std::wstring)
@@ -157,7 +104,7 @@ private:
     void CalculateZoneSet() noexcept;
     void UpdateActiveZoneSet(_In_opt_ IZoneSet* zoneSet) noexcept;
     LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) noexcept;
-    void OnPaint(HDC hdc) noexcept;
+    void OnPaint(wil::unique_hdc& hdc) noexcept;
     void OnKeyUp(WPARAM wparam) noexcept;
     std::vector<size_t> ZonesFromPoint(POINT pt) noexcept;
     void CycleActiveZoneSetInternal(DWORD wparam, Trace::ZoneWindow::InputMode mode) noexcept;
@@ -168,6 +115,7 @@ private:
     std::wstring m_uniqueId; // Parsed deviceId + resolution + virtualDesktopId
     wil::unique_hwnd m_window{}; // Hidden tool window used to represent current monitor desktop work area.
     HWND m_windowMoveSize{};
+    bool m_drawHints{};
     bool m_flashMode{};
     winrt::com_ptr<IZoneSet> m_activeZoneSet;
     std::vector<winrt::com_ptr<IZoneSet>> m_zoneSets;
@@ -178,8 +126,6 @@ private:
     static const UINT m_showAnimationDuration = 200; // ms
     static const UINT m_flashDuration = 700; // ms
     
-    std::atomic<bool> m_animating;
-    OnThreadExecutor m_paintExecutor;
     ULONG_PTR gdiplusToken;
 };
 
@@ -195,13 +141,11 @@ ZoneWindow::ZoneWindow(HINSTANCE hinstance)
 
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-    m_paintExecutor.submit(OnThreadExecutor::task_t{ []() { BufferedPaintInit(); } });
 }
 
 ZoneWindow::~ZoneWindow()
 {
     Gdiplus::GdiplusShutdown(gdiplusToken);
-    m_paintExecutor.submit(OnThreadExecutor::task_t{ []() { BufferedPaintUnInit(); } });
 }
 
 bool ZoneWindow::Init(IZoneWindowHost* host, HINSTANCE hinstance, HMONITOR monitor, const std::wstring& uniqueId, const std::wstring& parentUniqueId, bool flashZones)
@@ -263,6 +207,7 @@ bool ZoneWindow::Init(IZoneWindowHost* host, HINSTANCE hinstance, HMONITOR monit
 IFACEMETHODIMP ZoneWindow::MoveSizeEnter(HWND window) noexcept
 {
     m_windowMoveSize = window;
+    m_drawHints = true;
     m_highlightZone = {};
     m_initialHighlightZone = {};
     ShowZoneWindow();
@@ -288,7 +233,44 @@ IFACEMETHODIMP ZoneWindow::MoveSizeUpdate(POINT const& ptScreen, bool dragEnable
             }
             else
             {
-                highlightZone = m_activeZoneSet->GetCombinedZoneRange(m_initialHighlightZone, highlightZone);
+                std::vector<size_t> newHighlightZone;
+                std::set_union(begin(highlightZone), end(highlightZone), begin(m_initialHighlightZone), end(m_initialHighlightZone), std::back_inserter(newHighlightZone));
+
+                RECT boundingRect;
+                bool boundingRectEmpty = true;
+                auto zones = m_activeZoneSet->GetZones();
+
+                for (size_t zoneId : newHighlightZone)
+                {
+                    RECT rect = zones[zoneId]->GetZoneRect();
+                    if (boundingRectEmpty)
+                    {
+                        boundingRect = rect;
+                        boundingRectEmpty = false;
+                    }
+                    else
+                    {
+                        boundingRect.left = min(boundingRect.left, rect.left);
+                        boundingRect.top = min(boundingRect.top, rect.top);
+                        boundingRect.right = max(boundingRect.right, rect.right);
+                        boundingRect.bottom = max(boundingRect.bottom, rect.bottom);
+                    }
+                }
+
+                highlightZone.clear();
+
+                if (!boundingRectEmpty)
+                {
+                    for (size_t zoneId = 0; zoneId < zones.size(); zoneId++)
+                    {
+                        RECT rect = zones[zoneId]->GetZoneRect();
+                        if (boundingRect.left <= rect.left && rect.right <= boundingRect.right &&
+                            boundingRect.top <= rect.top && rect.bottom <= boundingRect.bottom)
+                        {
+                            highlightZone.push_back(zoneId);
+                        }
+                    }
+                }
             }
         }
         else
@@ -325,7 +307,8 @@ IFACEMETHODIMP ZoneWindow::MoveSizeEnd(HWND window, POINT const& ptScreen) noexc
         MapWindowPoints(nullptr, m_window.get(), &ptClient, 1);
         m_activeZoneSet->MoveWindowIntoZoneByIndexSet(window, m_window.get(), m_highlightZone);
 
-        if (FancyZonesUtils::HasNoVisibleOwner(window))
+        auto windowInfo = FancyZonesUtils::GetFancyZonesWindowInfo(window);
+        if (windowInfo.noVisibleOwner)
         {
             SaveWindowProcessToZoneIndex(window);
         }
@@ -359,7 +342,8 @@ ZoneWindow::MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, boo
     {
         if (m_activeZoneSet->MoveWindowIntoZoneByDirectionAndIndex(window, m_window.get(), vkCode, cycle))
         {
-            if (FancyZonesUtils::HasNoVisibleOwner(window))
+            auto windowInfo = FancyZonesUtils::GetFancyZonesWindowInfo(window);
+            if (windowInfo.noVisibleOwner)
             {
                 SaveWindowProcessToZoneIndex(window);
             }
@@ -375,20 +359,6 @@ ZoneWindow::MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, 
     if (m_activeZoneSet)
     {
         if (m_activeZoneSet->MoveWindowIntoZoneByDirectionAndPosition(window, m_window.get(), vkCode, cycle))
-        {
-            SaveWindowProcessToZoneIndex(window);
-            return true;
-        }
-    }
-    return false;
-}
-
-IFACEMETHODIMP_(bool)
-ZoneWindow::ExtendWindowByDirectionAndPosition(HWND window, DWORD vkCode) noexcept
-{
-    if (m_activeZoneSet)
-    {
-        if (m_activeZoneSet->ExtendWindowByDirectionAndPosition(window, m_window.get(), vkCode))
         {
             SaveWindowProcessToZoneIndex(window);
             return true;
@@ -453,7 +423,6 @@ ZoneWindow::ShowZoneWindow() noexcept
     SetWindowPos(window, windowInsertAfter, 0, 0, 0, 0, flags);
 
     std::thread{ [this, strong_this{ get_strong() }]() {
-        m_animating = true;
         auto window = m_window.get();
         AnimateWindow(window, m_showAnimationDuration, AW_BLEND);
         InvalidateRect(window, nullptr, true);
@@ -461,7 +430,6 @@ ZoneWindow::ShowZoneWindow() noexcept
         {
             HideZoneWindow();
         }
-        m_animating = false;
     } }.detach();
 }
 
@@ -473,6 +441,7 @@ ZoneWindow::HideZoneWindow() noexcept
         ShowWindow(m_window.get(), SW_HIDE);
         m_keyLast = 0;
         m_windowMoveSize = nullptr;
+        m_drawHints = false;
         m_highlightZone = {};
     }
 }
@@ -497,9 +466,9 @@ ZoneWindow::ClearSelectedZones() noexcept
 
 void ZoneWindow::InitializeZoneSets(const std::wstring& parentUniqueId) noexcept
 {
-    bool deviceAdded = FancyZonesDataInstance().AddDevice(m_uniqueId);
-    // If the device has been added, check if it should inherit the parent's layout
-    if (deviceAdded && !parentUniqueId.empty())
+    // If there is not defined zone layout for this work area, created default entry.
+    FancyZonesDataInstance().AddDevice(m_uniqueId);
+    if (!parentUniqueId.empty())
     {
         FancyZonesDataInstance().CloneDeviceInfo(parentUniqueId, m_uniqueId);
     }
@@ -526,13 +495,10 @@ void ZoneWindow::CalculateZoneSet() noexcept
     GUID zoneSetId;
     if (SUCCEEDED_LOG(CLSIDFromString(activeZoneSet.uuid.c_str(), &zoneSetId)))
     {
-        int sensitivityRadius = deviceInfoData->sensitivityRadius;
-
         auto zoneSet = MakeZoneSet(ZoneSetConfig(
             zoneSetId,
             activeZoneSet.type,
-            m_monitor,
-            sensitivityRadius));
+            m_monitor));
         
         RECT workArea;
         if (m_monitor)
@@ -556,7 +522,6 @@ void ZoneWindow::CalculateZoneSet() noexcept
         bool showSpacing = deviceInfoData->showSpacing;
         int spacing = showSpacing ? deviceInfoData->spacing : 0;
         int zoneCount = deviceInfoData->zoneCount;
-        
         zoneSet->CalculateZones(workArea, zoneCount, spacing);
         UpdateActiveZoneSet(zoneSet.get());        
     }
@@ -595,13 +560,23 @@ LRESULT ZoneWindow::WndProc(UINT message, WPARAM wparam, LPARAM lparam) noexcept
         return 1;
 
     case WM_PRINTCLIENT:
-    {
-        OnPaint(reinterpret_cast<HDC>(wparam));
-    }
-    break;
     case WM_PAINT:
     {
-        OnPaint(NULL);
+        PAINTSTRUCT ps;
+        wil::unique_hdc hdc{ reinterpret_cast<HDC>(wparam) };
+        if (!hdc)
+        {
+            hdc.reset(BeginPaint(m_window.get(), &ps));
+        }
+
+        OnPaint(hdc);
+
+        if (wparam == 0)
+        {
+            EndPaint(m_window.get(), &ps);
+        }
+
+        hdc.release();
     }
     break;
 
@@ -613,49 +588,31 @@ LRESULT ZoneWindow::WndProc(UINT message, WPARAM wparam, LPARAM lparam) noexcept
     return 0;
 }
 
-void ZoneWindow::OnPaint(HDC hdc) noexcept
+void ZoneWindow::OnPaint(wil::unique_hdc& hdc) noexcept
 {
-    HWND window = m_window.get();
-    bool hasActiveZoneSet = m_activeZoneSet && m_host;
-    COLORREF hostZoneColor{};
-    COLORREF hostZoneBorderColor{};
-    COLORREF hostZoneHighlightColor{};
-    int hostZoneHighlightOpacity{};
-    IZoneSet::ZonesMap zones;
-    std::vector<size_t> highlightZone = m_highlightZone;
-    bool flashMode = m_flashMode;
+    RECT clientRect;
+    GetClientRect(m_window.get(), &clientRect);
 
-    if (hasActiveZoneSet)
+    wil::unique_hdc hdcMem;
+    HPAINTBUFFER bufferedPaint = BeginBufferedPaint(hdc.get(), &clientRect, BPBF_TOPDOWNDIB, nullptr, &hdcMem);
+    if (bufferedPaint)
     {
-        hostZoneColor = m_host->GetZoneColor();
-        hostZoneBorderColor = m_host->GetZoneBorderColor();
-        hostZoneHighlightColor = m_host->GetZoneHighlightColor();
-        hostZoneHighlightOpacity = m_host->GetZoneHighlightOpacity();
-        zones = m_activeZoneSet->GetZones();
-    }
+        ZoneWindowDrawing::DrawBackdrop(hdcMem, clientRect);
 
-    OnThreadExecutor::task_t task{
-        [=]() {
-        ZoneWindowUtils::PaintZoneWindow(hdc,
-                                         window,
-                                         hasActiveZoneSet,
-                                         hostZoneColor,
-                                         hostZoneBorderColor,
-                                         hostZoneHighlightColor,
-                                         hostZoneHighlightOpacity,
-                                         zones,
-                                         highlightZone,
-                                         flashMode);
-        } };
+        if (m_activeZoneSet && m_host)
+        {
+            ZoneWindowDrawing::DrawActiveZoneSet(hdcMem,
+                                                   m_host->GetZoneColor(),
+                                                   m_host->GetZoneBorderColor(),
+                                                   m_host->GetZoneHighlightColor(),
+                                                   m_host->GetZoneHighlightOpacity(),
+                                                   m_activeZoneSet->GetZones(),
+                                                   m_highlightZone,
+                                                   m_flashMode,
+                                                   m_drawHints);
+        }
 
-    if (m_animating)
-    {
-        task();
-    }
-    else
-    {
-        m_paintExecutor.cancel();
-        m_paintExecutor.submit(std::move(task));
+        EndBufferedPaint(bufferedPaint, TRUE);
     }
 }
 

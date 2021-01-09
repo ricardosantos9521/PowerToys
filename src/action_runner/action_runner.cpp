@@ -16,7 +16,7 @@
 #include "../runner/tray_icon.h"
 #include "../runner/action_runner_utils.h"
 
-#include "Generated Files/resource.h"
+#include "resource.h"
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -190,8 +190,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
             else
             {
-                params += args[nextArg];
-                params += L' ';
+                params = args[nextArg];
                 nextArg++;
             }
         }

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -13,7 +13,7 @@ using Windows.UI.Popups;
 
 namespace Microsoft.PowerToys.Settings.UI.Runner
 {
-    public static class Program
+    public class Program
     {
         // Quantity of arguments
         private const int ArgumentsQty = 5;
@@ -27,8 +27,6 @@ namespace Microsoft.PowerToys.Settings.UI.Runner
 
         public static int PowerToysPID { get; set; }
 
-        public static Action<string> IPCMessageReceivedCallback { get; set; }
-
         [STAThread]
         public static void Main(string[] args)
         {
@@ -37,9 +35,9 @@ namespace Microsoft.PowerToys.Settings.UI.Runner
                 App app = new App();
                 app.InitializeComponent();
 
-                if (args != null && args.Length >= ArgumentsQty)
+                if (args.Length >= ArgumentsQty)
                 {
-                    _ = int.TryParse(args[2], out int powerToysPID);
+                    int.TryParse(args[2], out int powerToysPID);
                     PowerToysPID = powerToysPID;
 
                     if (args[4] == "true")
@@ -65,16 +63,7 @@ namespace Microsoft.PowerToys.Settings.UI.Runner
                         Environment.Exit(0);
                     });
 
-                    ipcmanager = new TwoWayPipeMessageIPCManaged(args[1], args[0], (string message) =>
-                    {
-                        if (IPCMessageReceivedCallback != null && message.Length > 0)
-                        {
-                            Application.Current.Dispatcher.BeginInvoke(new System.Action(() =>
-                            {
-                                IPCMessageReceivedCallback(message);
-                            }));
-                        }
-                    });
+                    ipcmanager = new TwoWayPipeMessageIPCManaged(args[1], args[0], null);
                     ipcmanager.Start();
                     app.Run();
                 }

@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using NUnit.Framework;
 using Wox.Infrastructure;
@@ -24,7 +23,7 @@ namespace Wox.Test
         private const string OneOneOneOne = "1111";
         private const string MicrosoftSqlServerManagementStudio = "Microsoft SQL Server Management Studio";
 
-        public static List<string> GetSearchStrings()
+        public List<string> GetSearchStrings()
             => new List<string>
             {
                 Chrome,
@@ -37,7 +36,7 @@ namespace Wox.Test
                 OneOneOneOne,
             };
 
-        public static List<int> GetPrecisionScores()
+        public List<int> GetPrecisionScores()
         {
             var listToReturn = new List<int>();
 
@@ -118,8 +117,7 @@ namespace Wox.Test
                 Debug.WriteLine("SEARCHTERM: " + searchTerm + ", GreaterThanSearchPrecisionScore: " + precisionScore);
                 foreach (var item in filteredResult)
                 {
-                    // Using InvariantCulture since this is used for testing
-                    Debug.WriteLine("SCORE: " + item.Score.ToString(CultureInfo.InvariantCulture) + ", FoundString: " + item.Title);
+                    Debug.WriteLine("SCORE: " + item.Score.ToString() + ", FoundString: " + item.Title);
                 }
 
                 Debug.WriteLine("###############################################");
@@ -130,7 +128,7 @@ namespace Wox.Test
         }
 
         [TestCase("vim", "Vim", "ignoreDescription", "ignore.exe", "Vim Diff", "ignoreDescription", "ignore.exe")]
-        public void WhenMultipleResultsExactMatchingResultShouldHaveGreatestScore(string queryString, string firstName, string firstDescription, string firstExecutableName, string secondName, string secondDescription, string secondExecutableName)
+        public void WhenMultipleResults_ExactMatchingResult_ShouldHaveGreatestScore(string queryString, string firstName, string firstDescription, string firstExecutableName, string secondName, string secondDescription, string secondExecutableName)
         {
             // Act
             var matcher = new StringMatcher();
@@ -230,7 +228,7 @@ namespace Wox.Test
 
         [TestCase("Windows Terminal", "Windows_Terminal", "term")]
         [TestCase("Windows Terminal", "WindowsTerminal", "term")]
-        public void FuzzyMatchingScoreShouldBeHigherWhenPreceedingCharacterIsSpace(string firstCompareStr, string secondCompareStr, string query)
+        public void FuzzyMatchingScore_ShouldBeHigher_WhenPreceedingCharacterIsSpace(string firstCompareStr, string secondCompareStr, string query)
         {
             // Arrange
             var matcher = new StringMatcher();

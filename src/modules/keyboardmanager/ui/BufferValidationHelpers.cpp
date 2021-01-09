@@ -1,23 +1,21 @@
 #include "pch.h"
 #include "BufferValidationHelpers.h"
 #include <keyboardmanager/common/KeyboardManagerConstants.h>
-#include <common\shared_constants.h>
-#include <modules\keyboardmanager\ui\KeyDropDownControl.h>
 
 namespace BufferValidationHelpers
 {
     // Function to validate and update an element of the key remap buffer when the selection has changed
-    KeyboardManagerHelper::ErrorType ValidateAndUpdateKeyBufferElement(int rowIndex, int colIndex, int selectedKeyCode, RemapBuffer& remapBuffer)
+    KeyboardManagerHelper::ErrorType ValidateAndUpdateKeyBufferElement(int rowIndex, int colIndex, int selectedKeyIndex, const std::vector<DWORD>& keyCodeList, RemapBuffer& remapBuffer)
     {
         KeyboardManagerHelper::ErrorType errorType = KeyboardManagerHelper::ErrorType::NoError;
 
         // Check if the element was not found or the index exceeds the known keys
-        if (selectedKeyCode != -1)
+        if (selectedKeyIndex != -1 && keyCodeList.size() > selectedKeyIndex)
         {
             // Check if the value being set is the same as the other column
             if (remapBuffer[rowIndex].first[std::abs(int(colIndex) - 1)].index() == 0)
             {
-                if (std::get<DWORD>(remapBuffer[rowIndex].first[std::abs(int(colIndex) - 1)]) == selectedKeyCode)
+                if (std::get<DWORD>(remapBuffer[rowIndex].first[std::abs(int(colIndex) - 1)]) == keyCodeList[selectedKeyIndex])
                 {
                     errorType = KeyboardManagerHelper::ErrorType::MapToSameKey;
                 }
@@ -34,7 +32,7 @@ namespace BufferValidationHelpers
                     {
                         if (remapBuffer[i].first[colIndex].index() == 0)
                         {
-                            KeyboardManagerHelper::ErrorType result = KeyboardManagerHelper::DoKeysOverlap(std::get<DWORD>(remapBuffer[i].first[colIndex]), selectedKeyCode);
+                            KeyboardManagerHelper::ErrorType result = KeyboardManagerHelper::DoKeysOverlap(std::get<DWORD>(remapBuffer[i].first[colIndex]), keyCodeList[selectedKeyIndex]);
                             if (result != KeyboardManagerHelper::ErrorType::NoError)
                             {
                                 errorType = result;
@@ -50,7 +48,7 @@ namespace BufferValidationHelpers
             // If there is no error, set the buffer
             if (errorType == KeyboardManagerHelper::ErrorType::NoError)
             {
-                remapBuffer[rowIndex].first[colIndex] = selectedKeyCode;
+                remapBuffer[rowIndex].first[colIndex] = keyCodeList[selectedKeyIndex];
             }
             else
             {
@@ -67,17 +65,18 @@ namespace BufferValidationHelpers
     }
 
     // Function to validate an element of the shortcut remap buffer when the selection has changed
-    std::pair<KeyboardManagerHelper::ErrorType, DropDownAction> ValidateShortcutBufferElement(int rowIndex, int colIndex, uint32_t dropDownIndex, const std::vector<int32_t>& selectedCodes, std::wstring appName, bool isHybridControl, const RemapBuffer& remapBuffer, bool dropDownFound)
+    std::pair<KeyboardManagerHelper::ErrorType, DropDownAction> ValidateShortcutBufferElement(int rowIndex, int colIndex, uint32_t dropDownIndex, const std::vector<int32_t>& selectedIndices, std::wstring appName, bool isHybridControl, const std::vector<DWORD>& keyCodeList, const RemapBuffer& remapBuffer, bool dropDownFound)
     {
         BufferValidationHelpers::DropDownAction dropDownAction = BufferValidationHelpers::DropDownAction::NoAction;
         KeyboardManagerHelper::ErrorType errorType = KeyboardManagerHelper::ErrorType::NoError;
-        size_t dropDownCount = selectedCodes.size();
-        DWORD selectedKeyCode = dropDownFound ? selectedCodes[dropDownIndex] : -1;
+        size_t dropDownCount = selectedIndices.size();
+        std::vector<DWORD> selectedKeyCodes = KeyboardManagerHelper::GetKeyCodesFromSelectedIndices(selectedIndices, keyCodeList);
+        int selectedKeyIndex = dropDownFound ? selectedIndices[dropDownIndex] : -1;
 
-        if (selectedKeyCode != -1 && dropDownFound)
+        if (selectedKeyIndex != -1 && keyCodeList.size() > selectedKeyIndex && dropDownFound)
         {
             // If only 1 drop down and action key is chosen: Warn that a modifier must be chosen (if the drop down is not for a hybrid scenario)
-            if (dropDownCount == 1 && !KeyboardManagerHelper::IsModifierKey(selectedKeyCode) && !isHybridControl)
+            if (dropDownCount == 1 && !KeyboardManagerHelper::IsModifierKey(keyCodeList[selectedKeyIndex]) && !isHybridControl)
             {
                 // warn and reset the drop down
                 errorType = KeyboardManagerHelper::ErrorType::ShortcutStartWithModifier;
@@ -86,10 +85,10 @@ namespace BufferValidationHelpers
             else if (dropDownIndex == dropDownCount - 1)
             {
                 // If last drop down and a modifier is selected: add a new drop down (max drop down count should be enforced)
-                if (KeyboardManagerHelper::IsModifierKey(selectedKeyCode) && dropDownCount < KeyboardManagerConstants::MaxShortcutSize)
+                if (KeyboardManagerHelper::IsModifierKey(keyCodeList[selectedKeyIndex]) && dropDownCount < KeyboardManagerConstants::MaxShortcutSize)
                 {
                     // If it matched any of the previous modifiers then reset that drop down
-                    if (KeyboardManagerHelper::CheckRepeatedModifier(selectedCodes, selectedKeyCode))
+                    if (KeyboardManagerHelper::CheckRepeatedModifier(selectedKeyCodes, selectedKeyIndex, keyCodeList))
                     {
                         // warn and reset the drop down
                         errorType = KeyboardManagerHelper::ErrorType::ShortcutCannotHaveRepeatedModifier;
@@ -101,13 +100,13 @@ namespace BufferValidationHelpers
                     }
                 }
                 // If last drop down and a modifier is selected but there are already max drop downs: warn the user
-                else if (KeyboardManagerHelper::IsModifierKey(selectedKeyCode) && dropDownCount >= KeyboardManagerConstants::MaxShortcutSize)
+                else if (KeyboardManagerHelper::IsModifierKey(keyCodeList[selectedKeyIndex]) && dropDownCount >= KeyboardManagerConstants::MaxShortcutSize)
                 {
                     // warn and reset the drop down
                     errorType = KeyboardManagerHelper::ErrorType::ShortcutMaxShortcutSizeOneActionKey;
                 }
                 // If None is selected but it's the last index: warn
-                else if (selectedKeyCode == 0)
+                else if (keyCodeList[selectedKeyIndex] == 0)
                 {
                     // If it is a hybrid control and there are 2 drop downs then deletion is allowed
                     if (isHybridControl && dropDownCount == KeyboardManagerConstants::MinShortcutSize)
@@ -122,20 +121,15 @@ namespace BufferValidationHelpers
                         errorType = KeyboardManagerHelper::ErrorType::ShortcutOneActionKey;
                     }
                 }
-                // Disable can not be selected if one modifier key has already been selected
-                else if (selectedKeyCode == CommonSharedConstants::VK_DISABLED && dropDownIndex)
-                {
-                    errorType = KeyboardManagerHelper::ErrorType::ShortcutDisableAsActionKey;
-                }
                 // If none of the above, then the action key will be set
             }
-            // If it is not the last drop down
+            // If it is the not the last drop down
             else
             {
-                if (KeyboardManagerHelper::IsModifierKey(selectedKeyCode))
+                if (KeyboardManagerHelper::IsModifierKey(keyCodeList[selectedKeyIndex]))
                 {
                     // If it matched any of the previous modifiers then reset that drop down
-                    if (KeyboardManagerHelper::CheckRepeatedModifier(selectedCodes, selectedKeyCode))
+                    if (KeyboardManagerHelper::CheckRepeatedModifier(selectedKeyCodes, selectedKeyIndex, keyCodeList))
                     {
                         // warn and reset the drop down
                         errorType = KeyboardManagerHelper::ErrorType::ShortcutCannotHaveRepeatedModifier;
@@ -143,13 +137,13 @@ namespace BufferValidationHelpers
                     // If not, the modifier key will be set
                 }
                 // If None is selected and there are more than 2 drop downs
-                else if (selectedKeyCode == 0 && dropDownCount > KeyboardManagerConstants::MinShortcutSize)
+                else if (keyCodeList[selectedKeyIndex] == 0 && dropDownCount > KeyboardManagerConstants::MinShortcutSize)
                 {
                     // set delete drop down flag
                     dropDownAction = BufferValidationHelpers::DropDownAction::DeleteDropDown;
                     // do not delete the drop down now since there may be some other error which would cause the drop down to be invalid after removal
                 }
-                else if (selectedKeyCode == 0 && dropDownCount <= KeyboardManagerConstants::MinShortcutSize)
+                else if (keyCodeList[selectedKeyIndex] == 0 && dropDownCount <= KeyboardManagerConstants::MinShortcutSize)
                 {
                     // If it is a hybrid control and there are 2 drop downs then deletion is allowed
                     if (isHybridControl && dropDownCount == KeyboardManagerConstants::MinShortcutSize)
@@ -164,18 +158,13 @@ namespace BufferValidationHelpers
                         errorType = KeyboardManagerHelper::ErrorType::ShortcutAtleast2Keys;
                     }
                 }
-                // Allow selection of VK_DISABLE only in first dropdown
-                else if (selectedKeyCode == CommonSharedConstants::VK_DISABLED && dropDownIndex)
-                {
-                    errorType = KeyboardManagerHelper::ErrorType::ShortcutDisableAsActionKey;
-                }
                 // If the user tries to set an action key check if all drop down menus after this are empty if it is not the first key. If it is a hybrid control, this can be done even on the first key
                 else if (dropDownIndex != 0 || isHybridControl)
                 {
                     bool isClear = true;
                     for (int i = dropDownIndex + 1; i < (int)dropDownCount; i++)
                     {
-                        if (selectedCodes[i] != -1)
+                        if (selectedIndices[i] != -1)
                         {
                             isClear = false;
                             break;
@@ -204,15 +193,15 @@ namespace BufferValidationHelpers
         // After validating the shortcut, now for errors like remap to same shortcut, remap shortcut more than once, Win L and Ctrl Alt Del
         if (errorType == KeyboardManagerHelper::ErrorType::NoError)
         {
-            KeyShortcutUnion tempShortcut;
-            if (isHybridControl && KeyDropDownControl::GetNumberOfSelectedKeys(selectedCodes) == 1)
+            std::variant<DWORD, Shortcut> tempShortcut;
+            if (isHybridControl && selectedKeyCodes.size() == 1)
             {
-                tempShortcut = *std::find_if(selectedCodes.begin(), selectedCodes.end(), [](int32_t a) { return a != -1 && a != 0; });
+                tempShortcut = selectedKeyCodes[0];
             }
             else
             {
                 tempShortcut = Shortcut();
-                std::get<Shortcut>(tempShortcut).SetKeyCodes(selectedCodes);
+                std::get<Shortcut>(tempShortcut).SetKeyCodes(selectedKeyCodes);
             }
 
             // Convert app name to lower case

@@ -8,14 +8,10 @@ namespace ColorPicker.ViewModelContracts
 {
     public interface IMainViewModel
     {
-        /// <summary>
-        /// Gets the text representation of the selected color value
-        /// </summary>
-        string ColorText { get; }
+        string HexColor { get; }
 
-        /// <summary>
-        /// Gets the current selected color as a <see cref="Brush"/>
-        /// </summary>
+        string RgbColor { get; }
+
         Brush ColorBrush { get; }
     }
 }

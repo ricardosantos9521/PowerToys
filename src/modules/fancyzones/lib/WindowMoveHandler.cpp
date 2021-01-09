@@ -1,15 +1,19 @@
 #include "pch.h"
 #include "WindowMoveHandler.h"
 
-#include <common/dpi_aware.h>
 #include <common/notifications.h>
-#include <common/toast_dont_show_again.h>
+#include <common/notifications/fancyzones_notifications.h>
 #include <common/window_helpers.h>
+#include <common/dpi_aware.h>
 
-#include "FancyZonesData.h"
-#include "Settings.h"
-#include "ZoneWindow.h"
-#include "util.h"
+#include "lib/Settings.h"
+#include "lib/ZoneWindow.h"
+#include "lib/util.h"
+#include "VirtualDesktopUtils.h"
+#include "lib/SecondaryMouseButtonsHook.h"
+#include "lib/GenericKeyHook.h"
+#include "lib/FancyZonesData.h"
+#include "lib/KeyState.h"
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -50,25 +54,129 @@ namespace WindowMoveHandlerUtils
     }
 }
 
-WindowMoveHandler::WindowMoveHandler(const winrt::com_ptr<IFancyZonesSettings>& settings, const std::function<void()>& keyUpdateCallback) :
-    m_settings(settings),
-    m_mouseState(false),
-    m_mouseHook(std::bind(&WindowMoveHandler::OnMouseDown, this)),
-    m_shiftKeyState(keyUpdateCallback),
-    m_ctrlKeyState(keyUpdateCallback),
-    m_keyUpdateCallback(keyUpdateCallback)
+class WindowMoveHandlerPrivate
 {
+public:
+    WindowMoveHandlerPrivate(const winrt::com_ptr<IFancyZonesSettings>& settings, const std::function<void()>& keyUpdateCallback) :
+        m_settings(settings),
+        m_mouseState(false),
+        m_mouseHook(std::bind(&WindowMoveHandlerPrivate::OnMouseDown, this)),
+        m_shiftKeyState(keyUpdateCallback),
+        m_ctrlKeyState(keyUpdateCallback),
+        m_keyUpdateCallback(keyUpdateCallback)
+    {
+    }
+
+    bool IsDragEnabled() const noexcept
+    {
+        return m_dragEnabled;
+    }
+
+    bool InMoveSize() const noexcept
+    {
+        return m_inMoveSize;
+    }
+
+    void MoveSizeStart(HWND window, HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept;
+    void MoveSizeUpdate(HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept;
+    void MoveSizeEnd(HWND window, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept;
+
+    void MoveWindowIntoZoneByIndexSet(HWND window, const std::vector<size_t>& indexSet, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept;
+    bool MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow);
+    bool MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow);
+
+private:
+    void WarnIfElevationIsRequired(HWND window) noexcept;
+    void UpdateDragState() noexcept;
+
+    void SetWindowTransparency(HWND window) noexcept;
+    void ResetWindowTransparency() noexcept;
+
+    inline void OnMouseDown() noexcept
+    {
+        m_mouseState = !m_mouseState;
+        m_keyUpdateCallback();
+    }
+
+private:
+    winrt::com_ptr<IFancyZonesSettings> m_settings{};
+
+    HWND m_windowMoveSize{}; // The window that is being moved/sized
+    bool m_inMoveSize{}; // Whether or not a move/size operation is currently active
+    winrt::com_ptr<IZoneWindow> m_zoneWindowMoveSize; // "Active" ZoneWindow, where the move/size is happening. Will update as drag moves between monitors.
+    bool m_dragEnabled{}; // True if we should be showing zone hints while dragging
+    
+    std::atomic<bool> m_mouseState;
+    SecondaryMouseButtonsHook m_mouseHook;
+    KeyState<VK_LSHIFT, VK_RSHIFT> m_shiftKeyState;
+    KeyState<VK_LCONTROL, VK_RCONTROL> m_ctrlKeyState;
+    std::function<void()> m_keyUpdateCallback;
+
+    struct WindowTransparencyProperties
+    {
+        HWND draggedWindow = nullptr;
+        long draggedWindowExstyle = 0;
+        COLORREF draggedWindowCrKey = RGB(0, 0, 0);
+        DWORD draggedWindowDwFlags = 0;
+        BYTE draggedWindowInitialAlpha = 0;
+    } m_windowTransparencyProperties;
+};
+
+WindowMoveHandler::WindowMoveHandler(const winrt::com_ptr<IFancyZonesSettings>& settings, const std::function<void()>& keyUpdateCallback) :
+    pimpl(new WindowMoveHandlerPrivate(settings, keyUpdateCallback)) {}
+
+WindowMoveHandler::~WindowMoveHandler()
+{
+    delete pimpl;
+}
+
+bool WindowMoveHandler::InMoveSize() const noexcept
+{
+    return pimpl->InMoveSize();
+}
+
+bool WindowMoveHandler::IsDragEnabled() const noexcept
+{
+    return pimpl->IsDragEnabled();
 }
 
 void WindowMoveHandler::MoveSizeStart(HWND window, HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
+{
+    pimpl->MoveSizeStart(window, monitor, ptScreen, zoneWindowMap);
+}
+
+void WindowMoveHandler::MoveSizeUpdate(HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
+{
+    pimpl->MoveSizeUpdate(monitor, ptScreen, zoneWindowMap);
+}
+
+void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
+{
+    pimpl->MoveSizeEnd(window, ptScreen, zoneWindowMap);
+}
+
+void WindowMoveHandler::MoveWindowIntoZoneByIndexSet(HWND window, const std::vector<size_t>& indexSet, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
+{
+    pimpl->MoveWindowIntoZoneByIndexSet(window, indexSet, zoneWindow);
+}
+
+bool WindowMoveHandler::MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow)
+{
+    return pimpl->MoveWindowIntoZoneByDirectionAndIndex(window, vkCode, cycle, zoneWindow);
+}
+
+bool WindowMoveHandler::MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow)
+{
+    return pimpl->MoveWindowIntoZoneByDirectionAndPosition(window, vkCode, cycle, zoneWindow);
+}
+
+void WindowMoveHandlerPrivate::MoveSizeStart(HWND window, HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
 {
     if (!FancyZonesUtils::IsCandidateForZoning(window, m_settings->GetSettings()->excludedAppsArray) || WindowMoveHandlerUtils::IsCursorTypeIndicatingSizeEvent())
     {
         return;
     }
 
-    m_moveSizeWindowInfo.hasNoVisibleOwner = FancyZonesUtils::HasNoVisibleOwner(window);
-    m_moveSizeWindowInfo.isStandardWindow = FancyZonesUtils::IsStandardWindow(window);
     m_inMoveSize = true;
 
     auto iter = zoneWindowMap.find(monitor);
@@ -126,7 +234,7 @@ void WindowMoveHandler::MoveSizeStart(HWND window, HMONITOR monitor, POINT const
     }
 }
 
-void WindowMoveHandler::MoveSizeUpdate(HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
+void WindowMoveHandlerPrivate::MoveSizeUpdate(HMONITOR monitor, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
 {
     if (!m_inMoveSize)
     {
@@ -193,9 +301,9 @@ void WindowMoveHandler::MoveSizeUpdate(HMONITOR monitor, POINT const& ptScreen, 
     }
 }
 
-void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
+void WindowMoveHandlerPrivate::MoveSizeEnd(HWND window, POINT const& ptScreen, const std::unordered_map<HMONITOR, winrt::com_ptr<IZoneWindow>>& zoneWindowMap) noexcept
 {
-    if (window != m_windowMoveSize)
+    if (window != m_windowMoveSize && !FancyZonesUtils::IsCandidateForZoning(window, m_settings->GetSettings()->excludedAppsArray))
     {
         return;
     }
@@ -208,21 +316,7 @@ void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const st
     {
         auto zoneWindow = std::move(m_zoneWindowMoveSize);
         ResetWindowTransparency();
-
-        bool hasNoVisibleOwner = FancyZonesUtils::HasNoVisibleOwner(window);
-        bool isStandardWindow = FancyZonesUtils::IsStandardWindow(window);
-
-        if ((isStandardWindow == false && hasNoVisibleOwner == true &&
-             m_moveSizeWindowInfo.isStandardWindow == true && m_moveSizeWindowInfo.hasNoVisibleOwner == true) ||
-            FancyZonesUtils::IsWindowMaximized(window))
-        {
-            // Abort the zoning, this is a Chromium based tab that is merged back with an existing window
-            // or if the window is maximized by Windows when the cursor hits the screen top border
-        }
-        else
-        {
-            zoneWindow->MoveSizeEnd(m_windowMoveSize, ptScreen);
-        }
+        zoneWindow->MoveSizeEnd(m_windowMoveSize, ptScreen);
     }
     else
     {
@@ -258,7 +352,7 @@ void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const st
         }
         ::RemoveProp(window, ZonedWindowProperties::PropertyMultipleZoneID);
     }
-
+    
     m_inMoveSize = false;
     m_dragEnabled = false;
     m_mouseState = false;
@@ -274,7 +368,7 @@ void WindowMoveHandler::MoveSizeEnd(HWND window, POINT const& ptScreen, const st
     }
 }
 
-void WindowMoveHandler::MoveWindowIntoZoneByIndexSet(HWND window, const std::vector<size_t>& indexSet, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
+void WindowMoveHandlerPrivate::MoveWindowIntoZoneByIndexSet(HWND window, const std::vector<size_t>& indexSet, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
 {
     if (window != m_windowMoveSize)
     {
@@ -282,46 +376,38 @@ void WindowMoveHandler::MoveWindowIntoZoneByIndexSet(HWND window, const std::vec
     }
 }
 
-bool WindowMoveHandler::MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
+bool WindowMoveHandlerPrivate::MoveWindowIntoZoneByDirectionAndIndex(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow)
 {
     return zoneWindow && zoneWindow->MoveWindowIntoZoneByDirectionAndIndex(window, vkCode, cycle);
 }
 
-bool WindowMoveHandler::MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
+bool WindowMoveHandlerPrivate::MoveWindowIntoZoneByDirectionAndPosition(HWND window, DWORD vkCode, bool cycle, winrt::com_ptr<IZoneWindow> zoneWindow)
 {
     return zoneWindow && zoneWindow->MoveWindowIntoZoneByDirectionAndPosition(window, vkCode, cycle);
 }
 
-bool WindowMoveHandler::ExtendWindowByDirectionAndPosition(HWND window, DWORD vkCode, winrt::com_ptr<IZoneWindow> zoneWindow) noexcept
+void WindowMoveHandlerPrivate::WarnIfElevationIsRequired(HWND window) noexcept
 {
-    return zoneWindow && zoneWindow->ExtendWindowByDirectionAndPosition(window, vkCode);
-}
-
-void WindowMoveHandler::WarnIfElevationIsRequired(HWND window) noexcept
-{
-    using namespace notifications;
-    using namespace NonLocalizable;
-
     static bool warning_shown = false;
     if (!is_process_elevated() && IsProcessOfWindowElevated(window))
     {
         m_dragEnabled = false;
-        if (!warning_shown && !is_toast_disabled(CantDragElevatedDontShowAgainRegistryPath, CantDragElevatedDisableIntervalInDays))
+        if (!warning_shown && !is_cant_drag_elevated_warning_disabled())
         {
-            std::vector<action_t> actions = {
-                link_button{ GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED_LEARN_MORE), FancyZonesRunAsAdminInfoPage },
-                link_button{ GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED_DIALOG_DONT_SHOW_AGAIN), ToastNotificationButtonUrl }
+            std::vector<notifications::action_t> actions = {
+                notifications::link_button{ GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED_LEARN_MORE), NonLocalizable::FancyZonesRunAsAdminInfoPage },
+                notifications::link_button{ GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED_DIALOG_DONT_SHOW_AGAIN), NonLocalizable::ToastNotificationButtonUrl }
             };
-            show_toast_with_activations(GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED),
-                                        GET_RESOURCE_STRING(IDS_FANCYZONES),
-                                        {},
-                                        std::move(actions));
+            notifications::show_toast_with_activations(GET_RESOURCE_STRING(IDS_CANT_DRAG_ELEVATED),
+                                                       GET_RESOURCE_STRING(IDS_FANCYZONES),
+                                                       {},
+                                                       std::move(actions));
             warning_shown = true;
         }
     }
 }
 
-void WindowMoveHandler::UpdateDragState() noexcept
+void WindowMoveHandlerPrivate::UpdateDragState() noexcept
 {
     if (m_settings->GetSettings()->shiftDrag)
     {
@@ -333,7 +419,7 @@ void WindowMoveHandler::UpdateDragState() noexcept
     }
 }
 
-void WindowMoveHandler::SetWindowTransparency(HWND window) noexcept
+void WindowMoveHandlerPrivate::SetWindowTransparency(HWND window) noexcept
 {
     if (m_settings->GetSettings()->makeDraggedWindowTransparent)
     {
@@ -350,7 +436,7 @@ void WindowMoveHandler::SetWindowTransparency(HWND window) noexcept
     }
 }
 
-void WindowMoveHandler::ResetWindowTransparency() noexcept
+void WindowMoveHandlerPrivate::ResetWindowTransparency() noexcept
 {
     if (m_settings->GetSettings()->makeDraggedWindowTransparent && m_windowTransparencyProperties.draggedWindow != nullptr)
     {

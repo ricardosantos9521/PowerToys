@@ -16,7 +16,16 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <summary>
         /// Delegate handler for open windows updates
         /// </summary>
-        public delegate void OpenWindowsUpdateEventHandler(object sender, SearchController.SearchResultUpdateEventArgs e);
+        public delegate void OpenWindowsUpdateHandler(object sender, SearchController.SearchResultUpdateEventArgs e);
+
+        /// <summary>
+        /// Event raised when there is an update to the list of open windows
+        /// </summary>
+        public event OpenWindowsUpdateHandler OnOpenWindowsUpdate
+        {
+            add { }
+            remove { }
+        }
 
         /// <summary>
         /// List of all the open windows
@@ -69,8 +78,8 @@ namespace Microsoft.Plugin.WindowWalker.Components
         public void UpdateOpenWindowsList()
         {
             windows.Clear();
-            NativeMethods.CallBackPtr callbackptr = new NativeMethods.CallBackPtr(WindowEnumerationCallBack);
-            _ = NativeMethods.EnumWindows(callbackptr, 0);
+            InteropAndHelpers.CallBackPtr callbackptr = new InteropAndHelpers.CallBackPtr(WindowEnumerationCallBack);
+            InteropAndHelpers.EnumWindows(callbackptr, 0);
         }
 
         /// <summary>

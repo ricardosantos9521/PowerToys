@@ -28,7 +28,7 @@ public:
     Shortcut(const std::wstring& shortcutVK);
 
     // Constructor to initialize shortcut from a list of keys
-    Shortcut(const std::vector<int32_t>& keys);
+    Shortcut(const std::vector<DWORD>& keys);
 
     // == operator
     inline bool operator==(const Shortcut& sc) const
@@ -153,7 +153,7 @@ public:
     std::vector<DWORD> GetKeyCodes();
 
     // Function to set a shortcut from a vector of key codes
-    void SetKeyCodes(const std::vector<int32_t>& keys);
+    void SetKeyCodes(const std::vector<DWORD>& keys);
 
     // Function to check if all the modifiers in the shortcut have been pressed down
     bool CheckModifiersKeyboardState(InputInterface& ii) const;
@@ -171,7 +171,6 @@ public:
     KeyboardManagerHelper::ErrorType IsShortcutIllegal() const;
 };
 
-using KeyShortcutUnion = std::variant<DWORD, Shortcut>;
-using RemapBufferItem = std::vector<KeyShortcutUnion>;
+using RemapBufferItem = std::vector<std::variant<DWORD, Shortcut>>;
 using RemapBufferRow = std::pair<RemapBufferItem, std::wstring>;
 using RemapBuffer = std::vector<RemapBufferRow>;

@@ -5,8 +5,8 @@
 using System;
 using System.Linq;
 using System.Windows;
+using ControlzEx.Theming;
 using MahApps.Metro.Theming;
-using ManagedCommon;
 using Microsoft.Win32;
 
 namespace Wox.Plugin
@@ -22,7 +22,7 @@ namespace Wox.Plugin
         private const string HighContrastWhiteTheme = "HighContrast.Accent5";
 
         private Theme currentTheme;
-        private bool _disposed;
+        private bool _disposed = false;
 
         public event ThemeChangedHandler ThemeChanged;
 
@@ -38,33 +38,42 @@ namespace Wox.Plugin
             Uri darkThemeUri = new Uri("pack://application:,,,/Themes/Dark.xaml");
 
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     highContrastOneThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     highContrastTwoThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     highContrastBlackThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     highContrastWhiteThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     lightThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
             ControlzEx.Theming.ThemeManager.Current.AddLibraryTheme(
-                new ControlzEx.Theming.LibraryTheme(
+                new LibraryTheme(
                     darkThemeUri,
                     MahAppsLibraryThemeProvider.DefaultInstance));
 
             ResetTheme();
-            ControlzEx.Theming.ThemeManager.Current.ThemeSyncMode = ControlzEx.Theming.ThemeSyncMode.SyncAll;
+            ControlzEx.Theming.ThemeManager.Current.ThemeSyncMode = ThemeSyncMode.SyncWithAppMode;
             ControlzEx.Theming.ThemeManager.Current.ThemeChanged += Current_ThemeChanged;
+            SystemParameters.StaticPropertyChanged += SystemParameters_StaticPropertyChanged;
+        }
+
+        private void SystemParameters_StaticPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SystemParameters.HighContrast))
+            {
+                ResetTheme();
+            }
         }
 
         public Theme GetCurrentTheme()
@@ -89,73 +98,71 @@ namespace Wox.Plugin
                 case "hcblack":
                     return Theme.HighContrastBlack;
                 default:
-                    return Theme.HighContrastOne;
+                    return Theme.None;
             }
         }
 
         private void ResetTheme()
         {
-            ChangeTheme(currentTheme, false);
+            if (SystemParameters.HighContrast)
+            {
+                Theme highContrastBaseType = GetHighContrastBaseType();
+                ChangeTheme(highContrastBaseType);
+            }
+            else
+            {
+                string baseColor = WindowsThemeHelper.GetWindowsBaseColor();
+                ChangeTheme((Theme)Enum.Parse(typeof(Theme), baseColor));
+            }
         }
 
-        public void ChangeTheme(Theme theme, bool forceSystem)
+        private void ChangeTheme(Theme theme)
         {
             Theme oldTheme = currentTheme;
-
-            if (theme == Theme.System)
+            if (theme == currentTheme)
             {
-                currentTheme = Theme.System;
-                if (ControlzEx.Theming.WindowsThemeHelper.IsHighContrastEnabled())
-                {
-                    Theme highContrastBaseType = GetHighContrastBaseType();
-                    ChangeTheme(highContrastBaseType, true);
-                }
-                else
-                {
-                    string baseColor = ControlzEx.Theming.WindowsThemeHelper.GetWindowsBaseColor();
-                    ChangeTheme((Theme)Enum.Parse(typeof(Theme), baseColor), true);
-                }
+                return;
             }
-            else if (theme == Theme.HighContrastOne)
+
+            if (theme == Theme.HighContrastOne)
             {
-                currentTheme = Theme.HighContrastOne;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, HighContrastOneTheme);
+                currentTheme = Theme.HighContrastOne;
             }
             else if (theme == Theme.HighContrastTwo)
             {
-                currentTheme = Theme.HighContrastTwo;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, HighContrastTwoTheme);
+                currentTheme = Theme.HighContrastTwo;
             }
             else if (theme == Theme.HighContrastWhite)
             {
-                currentTheme = Theme.HighContrastWhite;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, HighContrastWhiteTheme);
+                currentTheme = Theme.HighContrastWhite;
             }
             else if (theme == Theme.HighContrastBlack)
             {
-                currentTheme = Theme.HighContrastBlack;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, HighContrastBlackTheme);
+                currentTheme = Theme.HighContrastBlack;
             }
             else if (theme == Theme.Light)
             {
-                currentTheme = Theme.Light;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, LightTheme);
+                currentTheme = Theme.Light;
             }
             else if (theme == Theme.Dark)
             {
-                currentTheme = Theme.Dark;
                 ControlzEx.Theming.ThemeManager.Current.ChangeTheme(_app, DarkTheme);
+                currentTheme = Theme.Dark;
+            }
+            else
+            {
+                currentTheme = Theme.None;
             }
 
             ThemeChanged?.Invoke(oldTheme, currentTheme);
-
-            if (forceSystem)
-            {
-                currentTheme = Theme.System;
-            }
         }
 
-        private void Current_ThemeChanged(object sender, ControlzEx.Theming.ThemeChangedEventArgs e)
+        private void Current_ThemeChanged(object sender, ThemeChangedEventArgs e)
         {
             ResetTheme();
         }
@@ -167,6 +174,7 @@ namespace Wox.Plugin
                 if (disposing)
                 {
                     ControlzEx.Theming.ThemeManager.Current.ThemeChanged -= Current_ThemeChanged;
+                    SystemParameters.StaticPropertyChanged -= SystemParameters_StaticPropertyChanged;
                     _disposed = true;
                 }
             }
@@ -180,4 +188,15 @@ namespace Wox.Plugin
     }
 
     public delegate void ThemeChangedHandler(Theme oldTheme, Theme newTheme);
+
+    public enum Theme
+    {
+        None,
+        Light,
+        Dark,
+        HighContrastOne,
+        HighContrastTwo,
+        HighContrastBlack,
+        HighContrastWhite,
+    }
 }

@@ -7,7 +7,6 @@
 #include <commctrl.h>
 #include <algorithm>
 #include <fstream>
-#include <dll\PowerRenameConstants.h>
 
 namespace
 {
@@ -93,7 +92,7 @@ public:
         pushIdx(0),
         nextIdx(1),
         size(size),
-        jsonFilePath(PTSettingsHelper::get_module_save_folder_location(PowerRenameConstants::ModuleKey) + filePath),
+        jsonFilePath(PTSettingsHelper::get_module_save_folder_location(L"PowerRename") + filePath),
         registryFilePath(regPath)
     {
         items.resize(size);
@@ -396,7 +395,7 @@ IFACEMETHODIMP CRenameMRU::AddMRUString(_In_ PCWSTR entry)
 
 CSettings::CSettings()
 {
-    std::wstring result = PTSettingsHelper::get_module_save_folder_location(PowerRenameConstants::ModuleKey);
+    std::wstring result = PTSettingsHelper::get_module_save_folder_location(L"PowerRename");
     jsonFilePath = result + std::wstring(c_powerRenameDataFilePath);
     UIFlagsFilePath = result + std::wstring(c_powerRenameUIFlagsFilePath);
     Load();

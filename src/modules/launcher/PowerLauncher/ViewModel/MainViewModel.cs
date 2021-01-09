@@ -18,6 +18,7 @@ using Microsoft.PowerToys.Telemetry;
 using PowerLauncher.Helper;
 using PowerLauncher.Storage;
 using Wox.Core.Plugin;
+using Wox.Core.Resource;
 using Wox.Infrastructure;
 using Wox.Infrastructure.Hotkey;
 using Wox.Infrastructure.Storage;
@@ -41,6 +42,7 @@ namespace PowerLauncher.ViewModel
         private readonly UserSelectedRecord _userSelectedRecord;
         private readonly TopMostRecord _topMostRecord;
         private readonly object _addResultsLock = new object();
+        private readonly Internationalization _translator = InternationalizationManager.Instance;
         private readonly System.Diagnostics.Stopwatch _hotkeyTimer = new System.Diagnostics.Stopwatch();
 
         private string _queryTextBeforeLeaveResults;
@@ -55,6 +57,7 @@ namespace PowerLauncher.ViewModel
 
         public MainViewModel(Settings settings)
         {
+            HotkeyManager = new HotkeyManager();
             _saved = false;
             _queryTextBeforeLeaveResults = string.Empty;
             _currentQuery = _emptyQuery;
@@ -77,36 +80,27 @@ namespace PowerLauncher.ViewModel
             InitializeKeyCommands();
             RegisterResultsUpdatedEvent();
 
-            if (settings != null && settings.UsePowerToysRunnerKeyboardHook)
+            _settings.PropertyChanged += (s, e) =>
             {
-                NativeEventWaiter.WaitForEventLoop(Constants.PowerLauncherSharedEvent(), OnHotkey);
-                _hotkeyHandle = 0;
-            }
-            else
-            {
-                HotkeyManager = new HotkeyManager();
-                _settings.PropertyChanged += (s, e) =>
+                if (e.PropertyName == nameof(Settings.Hotkey))
                 {
-                    if (e.PropertyName == nameof(Settings.Hotkey))
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
+                        if (!string.IsNullOrEmpty(_settings.PreviousHotkey))
                         {
-                            if (!string.IsNullOrEmpty(_settings.PreviousHotkey))
-                            {
-                                HotkeyManager.UnregisterHotkey(_hotkeyHandle);
-                            }
+                            HotkeyManager.UnregisterHotkey(_hotkeyHandle);
+                        }
 
-                            if (!string.IsNullOrEmpty(_settings.Hotkey))
-                            {
-                                SetHotkey(_settings.Hotkey, OnHotkey);
-                            }
-                        });
-                    }
-                };
+                        if (!string.IsNullOrEmpty(_settings.Hotkey))
+                        {
+                            SetHotkey(_settings.Hotkey, OnHotkey);
+                        }
+                    });
+                }
+            };
 
-                SetHotkey(_settings.Hotkey, OnHotkey);
-                SetCustomPluginHotkey();
-            }
+            SetHotkey(_settings.Hotkey, OnHotkey);
+            SetCustomPluginHotkey();
         }
 
         private void RegisterResultsUpdatedEvent()
@@ -123,60 +117,6 @@ namespace PowerLauncher.ViewModel
                         UpdateResultView(e.Results, e.Query.RawQuery, _updateToken);
                     }, _updateToken);
                 };
-            }
-        }
-
-        private void OpenResultsEvent(object index, bool isMouseClick)
-        {
-            var results = SelectedResults;
-
-            if (index != null)
-            {
-                results.SelectedIndex = int.Parse(index.ToString(), CultureInfo.InvariantCulture);
-            }
-
-            if (results.SelectedItem != null)
-            {
-                bool executeResultRequired = false;
-
-                if (isMouseClick)
-                {
-                    executeResultRequired = true;
-                }
-                else
-                {
-                    // If there is a context button selected fire the action for that button instead, and the main command will not be executed
-                    executeResultRequired = !results.SelectedItem.ExecuteSelectedContextButton();
-                }
-
-                if (executeResultRequired)
-                {
-                    var result = results.SelectedItem.Result;
-
-                    // SelectedItem returns null if selection is empty.
-                    if (result != null && result.Action != null)
-                    {
-                        MainWindowVisibility = Visibility.Collapsed;
-
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            result.Action(new ActionContext
-                            {
-                                SpecialKeyState = KeyboardHelper.CheckModifiers(),
-                            });
-                        });
-
-                        if (SelectedIsFromQueryResults())
-                        {
-                            _userSelectedRecord.Add(result);
-                            _history.Add(result.OriginQuery.RawQuery);
-                        }
-                        else
-                        {
-                            SelectedResults = Results;
-                        }
-                    }
-                }
             }
         }
 
@@ -243,14 +183,49 @@ namespace PowerLauncher.ViewModel
                 Process.Start("https://aka.ms/PowerToys/");
             });
 
-            OpenResultWithKeyboardCommand = new RelayCommand(index =>
+            OpenResultCommand = new RelayCommand(index =>
             {
-                OpenResultsEvent(index, false);
-            });
+                var results = SelectedResults;
 
-            OpenResultWithMouseCommand = new RelayCommand(index =>
-            {
-                OpenResultsEvent(index, true);
+                if (index != null)
+                {
+                    results.SelectedIndex = int.Parse(index.ToString(), CultureInfo.InvariantCulture);
+                }
+
+                if (results.SelectedItem != null)
+                {
+                    // If there is a context button selected fire the action for that button before the main command.
+                    bool didExecuteContextButton = results.SelectedItem.ExecuteSelectedContextButton();
+
+                    if (!didExecuteContextButton)
+                    {
+                        var result = results.SelectedItem.Result;
+
+                        // SelectedItem returns null if selection is empty.
+                        if (result != null && result.Action != null)
+                        {
+                            MainWindowVisibility = Visibility.Collapsed;
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                result.Action(new ActionContext
+                                {
+                                    SpecialKeyState = KeyboardHelper.CheckModifiers(),
+                                });
+                            });
+
+                            if (SelectedIsFromQueryResults())
+                            {
+                                _userSelectedRecord.Add(result);
+                                _history.Add(result.OriginQuery.RawQuery);
+                            }
+                            else
+                            {
+                                SelectedResults = Results;
+                            }
+                        }
+                    }
+                }
             });
 
             LoadContextMenuCommand = new RelayCommand(_ =>
@@ -418,9 +393,7 @@ namespace PowerLauncher.ViewModel
 
         public ICommand LoadHistoryCommand { get; set; }
 
-        public ICommand OpenResultWithKeyboardCommand { get; set; }
-
-        public ICommand OpenResultWithMouseCommand { get; set; }
+        public ICommand OpenResultCommand { get; set; }
 
         public ICommand ClearQueryCommand { get; set; }
 
@@ -446,8 +419,8 @@ namespace PowerLauncher.ViewModel
             var results = new List<Result>();
             foreach (var h in _history.Items)
             {
-                var title = Properties.Resources.executeQuery;
-                var time = Properties.Resources.lastExecuteTime;
+                var title = _translator.GetTranslation("executeQuery");
+                var time = _translator.GetTranslation("lastExecuteTime");
                 var result = new Result
                 {
                     Title = string.Format(CultureInfo.InvariantCulture, title, h.Query),
@@ -500,9 +473,6 @@ namespace PowerLauncher.ViewModel
                     {
                         Thread.Sleep(20);
 
-                        // Keep track of total number of results for telemetry
-                        var numResults = 0;
-
                         // Contains all the plugins for which this raw query is valid
                         var plugins = pluginQueryPairs.Keys.ToList();
 
@@ -538,9 +508,7 @@ namespace PowerLauncher.ViewModel
                                     }
 
                                     currentCancellationToken.ThrowIfCancellationRequested();
-                                    numResults = Results.Results.Count;
                                     Results.Sort();
-                                    Results.SelectedItem = Results.Results.FirstOrDefault();
                                 }
                             }
 
@@ -577,9 +545,7 @@ namespace PowerLauncher.ViewModel
                                                         UpdateResultView(results, queryText, currentCancellationToken);
 
                                                         currentCancellationToken.ThrowIfCancellationRequested();
-                                                        numResults = Results.Results.Count;
                                                         Results.Sort();
-                                                        Results.SelectedItem = Results.Results.FirstOrDefault();
                                                     }
                                                 }
 
@@ -603,7 +569,7 @@ namespace PowerLauncher.ViewModel
                         var queryEvent = new LauncherQueryEvent()
                         {
                             QueryTimeMs = queryTimer.ElapsedMilliseconds,
-                            NumResults = numResults,
+                            NumResults = Results.Results.Count,
                             QueryLength = queryText.Length,
                         };
                         PowerToysTelemetry.Log.WriteEvent(queryEvent);
@@ -616,13 +582,7 @@ namespace PowerLauncher.ViewModel
                 _currentQuery = _emptyQuery;
                 Results.SelectedItem = null;
                 Results.Visibility = Visibility.Hidden;
-                Task.Run(() =>
-                {
-                    lock (_addResultsLock)
-                    {
-                        Results.Clear();
-                    }
-                });
+                Results.Clear();
             }
         }
 
@@ -688,7 +648,7 @@ namespace PowerLauncher.ViewModel
             catch (Exception)
 #pragma warning restore CA1031 // Do not catch general exception types
             {
-                string errorMsg = string.Format(CultureInfo.InvariantCulture, Properties.Resources.registerHotkeyFailed, hotkeyStr);
+                string errorMsg = string.Format(CultureInfo.InvariantCulture, InternationalizationManager.Instance.GetTranslation("registerHotkeyFailed"), hotkeyStr);
                 MessageBox.Show(errorMsg);
             }
         }
@@ -871,25 +831,13 @@ namespace PowerLauncher.ViewModel
             }
         }
 
-        public static bool ShouldAutoCompleteTextBeEmpty(string queryText, string autoCompleteText)
-        {
-            if (string.IsNullOrEmpty(autoCompleteText))
-            {
-                return false;
-            }
-            else
-            {
-                return string.IsNullOrEmpty(queryText) || autoCompleteText.IndexOf(queryText, StringComparison.Ordinal) != 0;
-            }
-        }
-
         public static string GetAutoCompleteText(int index, string input, string query)
         {
             if (!string.IsNullOrEmpty(input) && !string.IsNullOrEmpty(query))
             {
                 if (index == 0)
                 {
-                    if (input.IndexOf(query, StringComparison.OrdinalIgnoreCase) == 0)
+                    if (input.IndexOf(query, StringComparison.InvariantCultureIgnoreCase) == 0)
                     {
                         // Use the same case as the input query for the matched portion of the string
                         return query + input.Substring(query.Length);
@@ -906,7 +854,7 @@ namespace PowerLauncher.ViewModel
             {
                 if (index == 0 && !string.IsNullOrEmpty(query))
                 {
-                    if (input.IndexOf(query, StringComparison.OrdinalIgnoreCase) == 0)
+                    if (input.IndexOf(query, StringComparison.InvariantCultureIgnoreCase) == 0)
                     {
                         return query + input.Substring(query.Length);
                     }

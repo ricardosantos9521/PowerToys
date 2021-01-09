@@ -5,7 +5,6 @@
 // Code forked from Betsegaw Tadele's https://github.com/betsegaw/windowwalker/
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -35,12 +34,12 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <summary>
         /// Delegate handler for open windows updates
         /// </summary>
-        public delegate void SearchResultUpdateEventHandler(object sender, SearchResultUpdateEventArgs e);
+        public delegate void SearchResultUpdateHandler(object sender, SearchResultUpdateEventArgs e);
 
         /// <summary>
         /// Event raised when there is an update to the list of open windows
         /// </summary>
-        public event SearchResultUpdateEventHandler OnSearchResultUpdateEventHandler;
+        public event SearchResultUpdateHandler OnSearchResultUpdate;
 
         /// <summary>
         /// Gets or sets the current search text
@@ -54,7 +53,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
 
             set
             {
-                searchText = value.ToLower(CultureInfo.CurrentCulture).Trim();
+                searchText = value.ToLower().Trim();
             }
         }
 
@@ -89,6 +88,7 @@ namespace Microsoft.Plugin.WindowWalker.Components
         private SearchController()
         {
             searchText = string.Empty;
+            OpenWindows.Instance.OnOpenWindowsUpdate += OpenWindowsUpdateHandler;
         }
 
         /// <summary>
@@ -97,7 +97,17 @@ namespace Microsoft.Plugin.WindowWalker.Components
         public async Task UpdateSearchText(string searchText)
         {
             SearchText = searchText;
-            await SyncOpenWindowsWithModelAsync().ConfigureAwait(false);
+            await SyncOpenWindowsWithModelAsync();
+        }
+
+        /// <summary>
+        /// Event handler called when the OpenWindows list changes
+        /// </summary>
+        /// <param name="sender">sending item</param>
+        /// <param name="e">event arg</param>
+        public async void OpenWindowsUpdateHandler(object sender, SearchResultUpdateEventArgs e)
+        {
+            await SyncOpenWindowsWithModelAsync();
         }
 
         /// <summary>
@@ -109,16 +119,16 @@ namespace Microsoft.Plugin.WindowWalker.Components
 
             List<Window> snapshotOfOpenWindows = OpenWindows.Instance.Windows;
 
-            if (string.IsNullOrWhiteSpace(SearchText))
+            if (SearchText == string.Empty)
             {
                 searchMatches = new List<SearchResult>();
             }
             else
             {
-                searchMatches = await FuzzySearchOpenWindowsAsync(snapshotOfOpenWindows).ConfigureAwait(false);
+                searchMatches = await FuzzySearchOpenWindowsAsync(snapshotOfOpenWindows);
             }
 
-            OnSearchResultUpdateEventHandler?.Invoke(this, new SearchResultUpdateEventArgs());
+            OnSearchResultUpdate?.Invoke(this, new SearchResultUpdateEventArgs());
         }
 
         /// <summary>

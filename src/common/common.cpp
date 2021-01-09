@@ -11,6 +11,12 @@
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "shlwapi.lib")
 
+namespace localized_strings
+{
+    const wchar_t LAST_ERROR_FORMAT_STRING[] = L"%s failed with error %d: %s";
+    const wchar_t LAST_ERROR_TITLE_STRING[] = L"Error";
+}
+
 std::optional<RECT> get_window_pos(HWND hwnd)
 {
     RECT window;
@@ -85,7 +91,7 @@ std::optional<std::wstring> get_last_error_message(const DWORD dw)
     return message;
 }
 
-void show_last_error_message(LPCWSTR lpszFunction, DWORD dw, LPCWSTR errorTitle)
+void show_last_error_message(LPCWSTR lpszFunction, DWORD dw)
 {
     const auto system_message = get_last_error_message(dw);
     if (!system_message.has_value())
@@ -101,7 +107,7 @@ void show_last_error_message(LPCWSTR lpszFunction, DWORD dw, LPCWSTR errorTitle)
                          lpszFunction,
                          dw,
                          system_message->c_str());
-        MessageBoxW(NULL, (LPCTSTR)lpDisplayBuf, errorTitle, MB_OK | MB_ICONERROR);
+        MessageBoxW(NULL, (LPCTSTR)lpDisplayBuf, localized_strings::LAST_ERROR_TITLE_STRING, MB_OK);
         LocalFree(lpDisplayBuf);
     }
 }

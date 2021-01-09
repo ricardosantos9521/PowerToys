@@ -7,8 +7,7 @@
     xmlns:CustomControls="using:Microsoft.PowerToys.Settings.UI.Controls"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    AutomationProperties.LandmarkType="Main">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid RowSpacing="{StaticResource DefaultRowSpacing}">
         <VisualStateManager.VisualStateGroups>
@@ -76,15 +75,20 @@
                           IsEnabled="{x:Bind Mode=OneWay, Path=ViewModel.IsEnabled}"
                            />
 
-            <muxc:NumberBox x:Uid="PowerRename_Toggle_MaxDispListNum"
-                            SpinButtonPlacementMode="Compact"
+            <TextBlock Name="PowerRename_Toggle_MaxDispListNum"
+                x:Uid="PowerRename_Toggle_MaxDispListNum"
+                Margin="{StaticResource SmallTopMargin}"
+                Foreground="{x:Bind Mode=OneWay, Path=ViewModel.IsEnabled, Converter={StaticResource ModuleEnabledToForegroundConverter}}"/>
+
+            <muxc:NumberBox SpinButtonPlacementMode="Compact"
                             HorizontalAlignment="Left"
-                            Margin="{StaticResource SmallTopMargin}"
+                            Margin="{StaticResource HeaderTextTopMargin}"
                             Value="{x:Bind Mode=TwoWay, Path=ViewModel.MaxDispListNum}"
                             Minimum="0"
                             Width="240"
                             Maximum="20"
-                            IsEnabled="{x:Bind Mode=OneWay, Path=ViewModel.GlobalAndMruEnabled}"/>
+                            IsEnabled="{ x:Bind Mode=OneWay, Path=ViewModel.GlobalAndMruEnabled}"
+                            AutomationProperties.LabeledBy="{Binding ElementName=PowerRename_Toggle_MaxDispListNum}"/>
 
             <CheckBox x:Uid="PowerRename_Toggle_RestoreFlagsOnLaunch"
                           Margin="0, 17, 0, 0" 

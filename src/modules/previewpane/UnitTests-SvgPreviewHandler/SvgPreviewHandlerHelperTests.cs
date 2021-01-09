@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Text;
-using Microsoft.PowerToys.PreviewHandler.Svg.Utilities;
+using Common.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace SvgPreviewHandlerUnitTests

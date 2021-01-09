@@ -4,16 +4,12 @@
 
 using System;
 using System.Drawing;
-using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using CommonLibTest;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels;
-using Microsoft.PowerToys.Settings.UI.UnitTests.BackwardsCompatibility;
-using Microsoft.PowerToys.Settings.UI.UnitTests.Mocks;
+using Microsoft.PowerToys.Settings.UI.Lib;
+using Microsoft.PowerToys.Settings.UI.Lib.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace ViewModelTests
 {
@@ -22,79 +18,41 @@ namespace ViewModelTests
     {
         public const string FancyZonesTestFolderName = "Test\\FancyZones";
 
-        /// <summary>
-        /// Test if the original settings files were modified.
-        /// </summary>
-        [TestMethod]
-        [DataRow("v0.18.2", "settings.json")]
-        [DataRow("v0.19.2", "settings.json")]
-        [DataRow("v0.20.1", "settings.json")]
-        [DataRow("v0.21.1", "settings.json")]
-        [DataRow("v0.22.0", "settings.json")]
-        public void OriginalFilesModificationTest(string version, string fileName)
-        {
-            var mockIOProvider = BackCompatTestProperties.GetModuleIOProvider(version, FancyZonesSettings.ModuleName, fileName);
-            var mockSettingsUtils = new SettingsUtils(mockIOProvider.Object);
-            FancyZonesSettings originalSettings = mockSettingsUtils.GetSettings<FancyZonesSettings>(FancyZonesSettings.ModuleName);
-
-            var mockGeneralIOProvider = BackCompatTestProperties.GetGeneralSettingsIOProvider(version);
-            var mockGeneralSettingsUtils = new SettingsUtils(mockGeneralIOProvider.Object);
-            GeneralSettings originalGeneralSettings = mockGeneralSettingsUtils.GetSettings<GeneralSettings>();
-            var generalSettingsRepository = new BackCompatTestProperties.MockSettingsRepository<GeneralSettings>(mockGeneralSettingsUtils);
-            var fancyZonesRepository = new BackCompatTestProperties.MockSettingsRepository<FancyZonesSettings>(mockSettingsUtils);
-
-            // Initialise View Model with test Config files
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(generalSettingsRepository, fancyZonesRepository, ColorPickerIsEnabledByDefault_IPC);
-
-            // Verifiy that the old settings persisted
-            Assert.AreEqual(originalGeneralSettings.Enabled.FancyZones, viewModel.IsEnabled);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesAppLastZoneMoveWindows.Value, viewModel.AppLastZoneMoveWindows);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesBorderColor.Value, viewModel.ZoneBorderColor);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesDisplayChangeMoveWindows.Value, viewModel.DisplayChangeMoveWindows);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesEditorHotkey.Value.ToString(), viewModel.EditorHotkey.ToString());
-            Assert.AreEqual(originalSettings.Properties.FancyzonesExcludedApps.Value, viewModel.ExcludedApps);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesHighlightOpacity.Value, viewModel.HighlightOpacity);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesInActiveColor.Value, viewModel.ZoneInActiveColor);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesMakeDraggedWindowTransparent.Value, viewModel.MakeDraggedWindowsTransparent);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesMouseSwitch.Value, viewModel.MouseSwitch);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesMoveWindowsAcrossMonitors.Value, viewModel.MoveWindowsAcrossMonitors);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesMoveWindowsBasedOnPosition.Value, viewModel.MoveWindowsBasedOnPosition);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesOpenWindowOnActiveMonitor.Value, viewModel.OpenWindowOnActiveMonitor);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesOverrideSnapHotkeys.Value, viewModel.OverrideSnapHotkeys);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesRestoreSize.Value, viewModel.RestoreSize);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesShiftDrag.Value, viewModel.ShiftDrag);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesShowOnAllMonitors.Value, viewModel.ShowOnAllMonitors);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesSpanZonesAcrossMonitors.Value, viewModel.SpanZonesAcrossMonitors);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesZoneHighlightColor.Value, viewModel.ZoneHighlightColor);
-            Assert.AreEqual(originalSettings.Properties.FancyzonesZoneSetChangeMoveWindows.Value, viewModel.ZoneSetChangeMoveWindows);
-            Assert.AreEqual(originalSettings.Properties.UseCursorposEditorStartupscreen.Value, viewModel.UseCursorPosEditorStartupScreen);
-
-           //Verify that the stub file was used
-            var expectedCallCount = 2;  //once via the view model, and once by the test (GetSettings<T>)
-            BackCompatTestProperties.VerifyModuleIOProviderWasRead(mockIOProvider, FancyZonesSettings.ModuleName, expectedCallCount);
-            BackCompatTestProperties.VerifyGeneralSettingsIOProviderWasRead(mockGeneralIOProvider, expectedCallCount);
-        }
-
-        private int ColorPickerIsEnabledByDefault_IPC(string msg)
-        {
-            OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
-            Assert.IsTrue(snd.GeneralSettings.Enabled.ColorPicker);
-            return 0;
-        }
-
-        private Mock<ISettingsUtils> mockGeneralSettingsUtils;
-
-        private Mock<ISettingsUtils> mockFancyZonesSettingsUtils;
-
         [TestInitialize]
-        public void SetUpStubSettingUtils()
+        public void Setup()
         {
-            mockGeneralSettingsUtils = ISettingsUtilsMocks.GetStubSettingsUtils<GeneralSettings>();
-            mockFancyZonesSettingsUtils = ISettingsUtilsMocks.GetStubSettingsUtils<FancyZonesSettings>();
+            // initialize creation of test settings file.
+            GeneralSettings generalSettings = new GeneralSettings();
+            FZConfigProperties fZConfigProperties = new FZConfigProperties();
+
+            SettingsUtils.SaveSettings(generalSettings.ToJsonString());
+            SettingsUtils.SaveSettings(fZConfigProperties.ToJsonString(), FancyZonesTestFolderName);
+        }
+
+        [TestCleanup]
+        public void CleanUp()
+        {
+            // delete general settings folder created.
+            string generalSettings_file_name = string.Empty;
+            if (SettingsUtils.SettingsFolderExists(string.Empty))
+            {
+                DeleteFolder(string.Empty);
+            }
+
+            // delete fancy zones folder created.
+            if (SettingsUtils.SettingsFolderExists(FancyZonesTestFolderName))
+            {
+                DeleteFolder(FancyZonesTestFolderName);
+            }
+        }
+
+        public void DeleteFolder(string powertoy)
+        {
+            Directory.Delete(Path.Combine(SettingsUtils.LocalApplicationDataFolder(), $"Microsoft\\PowerToys\\{powertoy}"), true);
         }
 
         [TestMethod]
-        public void IsEnabledShouldDisableModuleWhenSuccessful()
+        public void IsEnabled_ShouldDisableModule_WhenSuccessful()
         {
             Func<string, int> SendMockIPCConfigMSG = msg =>
             {
@@ -104,7 +62,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsTrue(viewModel.IsEnabled); // check if the module is enabled.
 
             // act
@@ -112,7 +70,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ShiftDragShouldSetValue2FalseWhenSuccessful()
+        public void ShiftDrag_ShouldSetValue2False_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -123,7 +81,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsTrue(viewModel.ShiftDrag); // check if value was initialized to false.
 
             // act
@@ -131,7 +89,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void OverrideSnapHotkeysShouldSetValue2TrueWhenSuccessful()
+        public void OverrideSnapHotkeys_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -142,7 +100,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.OverrideSnapHotkeys); // check if value was initialized to false.
 
             // act
@@ -150,7 +108,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void MoveWindowsBasedOnPositionShouldSetValue2TrueWhenSuccessful()
+        public void MoveWindowsBasedOnPosition_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -161,7 +119,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.MoveWindowsBasedOnPosition); // check if value was initialized to false.
 
             // act
@@ -169,7 +127,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ZoneSetChangeFlashZonesShouldSetValue2FalseWhenSuccessful()
+        public void ZoneSetChangeFlashZones_ShouldSetValue2False_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -180,7 +138,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.MakeDraggedWindowsTransparent); // check if value was initialized to false.
 
             // act
@@ -188,7 +146,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void MouseSwitchShouldSetValue2TrueWhenSuccessful()
+        public void MouseSwitch_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -199,7 +157,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.MouseSwitch); // check if value was initialized to false.
 
             // act
@@ -207,7 +165,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void DisplayChangeMoveWindowsShouldSetValue2TrueWhenSuccessful()
+        public void DisplayChangeMoveWindows_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -218,7 +176,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.DisplayChangeMoveWindows); // check if value was initialized to false.
 
             // act
@@ -226,7 +184,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ZoneSetChangeMoveWindowsShouldSetValue2TrueWhenSuccessful()
+        public void ZoneSetChangeMoveWindows_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -237,7 +195,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.ZoneSetChangeMoveWindows); // check if value was initialized to false.
 
             // act
@@ -245,7 +203,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void AppLastZoneMoveWindowsShouldSetValue2TrueWhenSuccessful()
+        public void AppLastZoneMoveWindows_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -256,14 +214,14 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.AppLastZoneMoveWindows); // check if value was initialized to false.
 
             // act
             viewModel.AppLastZoneMoveWindows = true;
         }
 
-        public void OpenWindowOnActiveMonitorShouldSetValue2TrueWhenSuccessful()
+        public void OpenWindowOnActiveMonitor_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -274,7 +232,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.OpenWindowOnActiveMonitor); // check if value was initialized to false.
 
             // act
@@ -282,7 +240,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void RestoreSizeShouldSetValue2TrueWhenSuccessful()
+        public void RestoreSize_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -293,7 +251,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.RestoreSize); // check if value was initialized to false.
 
             // act
@@ -301,7 +259,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void UseCursorPosEditorStartupScreenShouldSetValue2FalseWhenSuccessful()
+        public void UseCursorPosEditorStartupScreen_ShouldSetValue2False_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -312,7 +270,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsTrue(viewModel.UseCursorPosEditorStartupScreen); // check if value was initialized to false.
 
             // act
@@ -320,7 +278,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ShowOnAllMonitorsShouldSetValue2TrueWhenSuccessful()
+        public void ShowOnAllMonitors_ShouldSetValue2True_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -331,7 +289,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.IsFalse(viewModel.ShowOnAllMonitors); // check if value was initialized to false.
 
             // act
@@ -339,7 +297,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ZoneHighlightColorShouldSetColorValue2WhiteWhenSuccessful()
+        public void ZoneHighlightColor_ShouldSetColorValue2White_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -350,7 +308,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.AreEqual(ConfigDefaults.DefaultFancyZonesZoneHighlightColor, viewModel.ZoneHighlightColor);
 
             // act
@@ -358,7 +316,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ZoneBorderColorShouldSetColorValue2WhiteWhenSuccessful()
+        public void ZoneBorderColor_ShouldSetColorValue2White_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -369,7 +327,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.AreEqual(ConfigDefaults.DefaultFancyzonesBorderColor, viewModel.ZoneBorderColor);
 
             // act
@@ -377,7 +335,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ZoneInActiveColorShouldSetColorValue2WhiteWhenSuccessful()
+        public void ZoneInActiveColor_ShouldSetColorValue2White_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -388,7 +346,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.AreEqual(ConfigDefaults.DefaultFancyZonesInActiveColor, viewModel.ZoneInActiveColor);
 
             // act
@@ -396,7 +354,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ExcludedAppsShouldSetColorValue2WhiteWhenSuccessful()
+        public void ExcludedApps_ShouldSetColorValue2White_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -407,7 +365,7 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.AreEqual(string.Empty, viewModel.ExcludedApps);
 
             // act
@@ -415,7 +373,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void HighlightOpacityShouldSetOpacityValueTo60WhenSuccessful()
+        public void HighlightOpacity_ShouldSetOpacityValueTo60_WhenSuccessful()
         {
             // Assert
             Func<string, int> SendMockIPCConfigMSG = msg =>
@@ -426,11 +384,16 @@ namespace ViewModelTests
             };
 
             // arrange
-            FancyZonesViewModel viewModel = new FancyZonesViewModel(SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object), SettingsRepository<FancyZonesSettings>.GetInstance(mockFancyZonesSettingsUtils.Object), SendMockIPCConfigMSG, FancyZonesTestFolderName);
+            FancyZonesViewModel viewModel = new FancyZonesViewModel(SendMockIPCConfigMSG, FancyZonesTestFolderName);
             Assert.AreEqual(50, viewModel.HighlightOpacity);
 
             // act
             viewModel.HighlightOpacity = 60;
+        }
+
+        private string ToRGBHex(Color color)
+        {
+            return "#" + color.R.ToString("X2") + color.G.ToString("X2") + color.B.ToString("X2");
         }
     }
 }

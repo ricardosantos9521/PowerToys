@@ -45,10 +45,10 @@ namespace FancyZonesUnitTests
             // We're interested in the unique part between the first and last #'s
             // Example input: \\?\DISPLAY#DELA026#5&10a58c63&0&UID16777488#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}
             // Example output: DELA026#5&10a58c63&0&UID16777488
-            const std::wstring input = L"\\\\?\\DISPLAY#DELA026#5&10a58c63&0&UID16777488#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
-            const std::wstring actual = ParseDeviceId(input);
-            const std::wstring expected = L"DELA026#5&10a58c63&0&UID16777488";
-            Assert::AreEqual(expected, actual);
+            PCWSTR input = L"\\\\?\\DISPLAY#DELA026#5&10a58c63&0&UID16777488#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
+            wchar_t output[256]{};
+            ParseDeviceId(input, output, ARRAYSIZE(output));
+            Assert::AreEqual(0, wcscmp(output, L"DELA026#5&10a58c63&0&UID16777488"));
         }
 
         TEST_METHOD(TestParseInvalidDeviceId)
@@ -56,10 +56,10 @@ namespace FancyZonesUnitTests
             // We're interested in the unique part between the first and last #'s
             // Example input: \\?\DISPLAY#DELA026#5&10a58c63&0&UID16777488#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}
             // Example output: DELA026#5&10a58c63&0&UID16777488
-            const std::wstring input = L"AnInvalidDeviceId";
-            const std::wstring actual = ParseDeviceId(input);
-            const std::wstring expected = L"FallbackDevice";
-            Assert::AreEqual(expected, actual);
+            PCWSTR input = L"AnInvalidDeviceId";
+            wchar_t output[256]{};
+            ParseDeviceId(input, output, ARRAYSIZE(output));
+            Assert::AreEqual(0, wcscmp(output, L"FallbackDevice"));
         }
 
         TEST_METHOD(TestMonitorOrdering01)
@@ -231,27 +231,6 @@ namespace FancyZonesUnitTests
                 OrderMonitors(monitorInfoCopy);
                 CustomAssert::AreEqual(firstTime, monitorInfoCopy);
             } while (next_permutation(monitorInfoPermutation.begin(), monitorInfoPermutation.end(), [](auto x, auto y) { return x.first < y.first; }));
-        }
-    
-        TEST_METHOD(TestHexToRGB_rgb)
-        {
-            const auto expected = RGB(163, 246, 255);
-            const auto actual = HexToRGB(L"#A3F6FF");
-            Assert::AreEqual(expected, actual);
-        }
-
-        TEST_METHOD (TestHexToRGB_argb)
-        {
-            const auto expected = RGB(163, 246, 255);
-            const auto actual = HexToRGB(L"#FFA3F6FF");
-            Assert::AreEqual(expected, actual);
-        }
-
-        TEST_METHOD (TestHexToRGB_invalid)
-        {
-            const auto expected = RGB(255, 255, 255);
-            const auto actual = HexToRGB(L"zzz");
-            Assert::AreEqual(expected, actual);
         }
     };
 }

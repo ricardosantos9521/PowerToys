@@ -3,8 +3,8 @@
 #include "version.h"
 
 #include "http_client.h"
-#include "notifications.h"
 #include "updating.h"
+#include "toast_notifications_helper.h"
 
 #include <msi.h>
 #include <common/common.h>
@@ -84,6 +84,7 @@ namespace updating
         const auto uninstall_result = MsiInstallProductW(package_path.c_str(), L"REMOVE=ALL");
         if (ERROR_SUCCESS == uninstall_result)
         {
+            notifications::show_uninstallation_success();
             return true;
         }
         else if (auto system_message = get_last_error_message(uninstall_result); system_message.has_value())
@@ -102,11 +103,6 @@ namespace updating
 
     std::future<std::optional<new_version_download_info>> get_new_github_version_info_async()
     {
-        // If the current version starts with 0.0.*, it means we're on a local build from a farm and shouldn't check for updates.
-        if (VERSION_MAJOR == 0 && VERSION_MINOR == 0)
-        {
-            co_return std::nullopt;
-        }
         try
         {
             http::HttpClient client;
@@ -242,17 +238,16 @@ namespace updating
         }
     }
 
-    std::future<std::wstring> check_new_version_available()
+    std::future<void> check_new_version_available()
     {
         const auto new_version = co_await get_new_github_version_info_async();
         if (!new_version)
         {
             updating::notifications::show_unavailable();
-            co_return VersionHelper{ VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION }.toWstring();
+            co_return;
         }
 
         updating::notifications::show_available(new_version.value());
-        co_return new_version->version_string;
     }
 
     std::future<std::wstring> download_update()

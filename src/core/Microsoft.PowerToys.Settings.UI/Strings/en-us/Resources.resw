@@ -146,7 +146,7 @@
     <comment>Navigation view item name for Shortcut Guide</comment>
   </data>
   <data name="Shell_PowerPreview.Content" xml:space="preserve">
-    <value>File Explorer</value>
+    <value>File Explorer Preview</value>
     <comment>Navigation view item name for File Explorer Preview</comment>
   </data>
   <data name="Shell_FancyZones.Content" xml:space="preserve">
@@ -197,30 +197,6 @@
     <value>Remap shortcuts</value>
     <comment>Keyboard Manager remap shortcuts header</comment>
   </data>
-  <data name="RemapKeysList.AutomationProperties.Name" xml:space="preserve">
-    <value>Current Key Remappings</value>
-  </data>
-  <data name="RemapShortcutsList.AutomationProperties.Name" xml:space="preserve">
-    <value>Current Shortcut Remappings</value>
-  </data>
-  <data name="KeyboardManager_RemappedKeysListItem.AutomationProperties.Name" xml:space="preserve">
-    <value>Key Remapping</value>
-  </data>
-  <data name="KeyboardManager_RemappedShortcutsListItem.AutomationProperties.Name" xml:space="preserve">
-    <value>Shortcut Remapping</value>
-  </data>
-  <data name="KeyboardManager_RemappedTo.AutomationProperties.Name" xml:space="preserve">
-    <value>Remapped to</value>
-  </data>
-  <data name="KeyboardManager_ShortcutRemappedTo.AutomationProperties.Name" xml:space="preserve">
-    <value>Remapped to</value>
-  </data>
-  <data name="KeyboardManager_TargetApp.AutomationProperties.Name" xml:space="preserve">
-    <value>For Target Application</value>
-  </data>
-  <data name="KeyboardManager_Image.AutomationProperties.Name" xml:space="preserve">
-    <value>Keyboard Manager</value>
-  </data>
   <data name="ColorPicker_Description.Text" xml:space="preserve">
     <value>Quick and simple system-wide color picker.</value>
   </data>
@@ -269,7 +245,7 @@
   <data name="PowerLauncher_SearchTypePreference_ExecutableName" xml:space="preserve">
     <value>Executable name</value>
   </data>
-  <data name="PowerLauncher_MaximumNumberOfResults.Header" xml:space="preserve">
+  <data name="PowerLauncher_MaximumNumberOfResults.Text" xml:space="preserve">
     <value>Maximum number of results</value>
   </data>
   <data name="PowerLauncher_Shortcuts.Text" xml:space="preserve">
@@ -337,7 +313,7 @@
     <value>Open zones editor</value>
   </data>
   <data name="SettingsPage_SetShortcut.AutomationProperties.Name" xml:space="preserve">
-    <value>Shortcut setting</value>
+    <value>Set Shortcut</value>
   </data>
   <data name="SettingsPage_SetShortcut_Glyph.AutomationProperties.Name" xml:space="preserve">
     <value>Information Symbol</value>
@@ -367,7 +343,7 @@
     <value>Move newly created windows to their last known zone</value>
   </data>
   <data name="FancyZones_OpenWindowOnActiveMonitor.Content" xml:space="preserve">
-    <value>Move newly created windows to the current active monitor (EXPERIMENTAL)</value>
+    <value>Move newly created windows to the current active monitor [EXPERIMENTAL]</value>
   </data>
   <data name="FancyZones_UseCursorPosEditorStartupScreen.Content" xml:space="preserve">
     <value>Follow mouse cursor instead of focus when launching editor in a multi screen environment</value>
@@ -402,6 +378,15 @@
   <data name="GeneralPage_PrivacyStatement_URL.Text" xml:space="preserve">
     <value>Privacy statement</value>
   </data>
+  <data name="GeneralPage_Radio_Theme_Dark.Content" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="GeneralPage_Radio_Theme_Default.Content" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="GeneralPage_Radio_Theme_Light.Content" xml:space="preserve">
+    <value>Light</value>
+  </data>
   <data name="GeneralPage_ReportAbug.Text" xml:space="preserve">
     <value>Report a bug</value>
   </data>
@@ -432,7 +417,7 @@
   <data name="PowerRename_Toggle_EnableOnExtendedContextMenu.Header" xml:space="preserve">
     <value>Appear only in extended context menu (Shift + Right-click)</value>
   </data>
-  <data name="PowerRename_Toggle_MaxDispListNum.Header" xml:space="preserve">
+  <data name="PowerRename_Toggle_MaxDispListNum.Text" xml:space="preserve">
     <value>Maximum number of items</value>
   </data>
   <data name="PowerRename_Toggle_RestoreFlagsOnLaunch.Content" xml:space="preserve">
@@ -468,7 +453,7 @@
   <data name="ShortcutGuide_Description.Text" xml:space="preserve">
     <value>Shows a help overlay with Windows shortcuts when the Windows key is pressed.</value>
   </data>
-  <data name="ShortcutGuide_PressTime.Header" xml:space="preserve">
+  <data name="ShortcutGuide_PressTime.Text" xml:space="preserve">
     <value>Press duration before showing (ms)</value>
   </data>
   <data name="ShortcutGuide_Appearance_Behavior.Text" xml:space="preserve">
@@ -479,6 +464,9 @@
   </data>
   <data name="ShortcutGuide_OverlayOpacity.Header" xml:space="preserve">
     <value>Opacity of background</value>
+  </data>
+  <data name="ShortcutGuide_Theme.Text" xml:space="preserve">
+    <value>Choose Shortcut Guide overlay color</value>
   </data>
   <data name="ImageResizer_CustomSizes.Text" xml:space="preserve">
     <value>Image sizes</value>
@@ -525,7 +513,7 @@
   <data name="ImageResizer_SaveSizeButton.Label" xml:space="preserve">
     <value>Save sizes</value>
   </data>
-  <data name="ImageResizer_Encoding.Header" xml:space="preserve">
+  <data name="ImageResizer_Encoding.Text" xml:space="preserve">
     <value>JPEG quality level</value>
   </data>
   <data name="ImageResizer_PNGInterlacing.Header" xml:space="preserve">
@@ -628,10 +616,10 @@
     <value>About FancyZones</value>
   </data>
   <data name="About_FileExplorerPreview.Text" xml:space="preserve">
-    <value>About File Explorer</value>
+    <value>About File Explorer Preview</value>
   </data>
   <data name="FileExplorerPreview_Image.AutomationProperties.Name" xml:space="preserve">
-    <value>File Explorer</value>
+    <value>File Explorer Preview</value>
   </data>
   <data name="About_ImageResizer.Text" xml:space="preserve">
     <value>About Image Resizer</value>
@@ -672,8 +660,8 @@
   <data name="General_Version.Text" xml:space="preserve">
     <value>Version:</value>
   </data>
-  <data name="General_Version.AutomationProperties.Name" xml:space="preserve">
-    <value>Version</value>
+  <data name="Shortcut_Overlay_Theme.Header" xml:space="preserve">
+    <value>Background theme</value>
   </data>
   <data name="Admin_mode.Text" xml:space="preserve">
     <value>Administrator mode</value>
@@ -712,7 +700,7 @@
     <value>Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity.</value>
   </data>
   <data name="FancyZones_SpanZonesAcrossMonitorsCheckBoxControl.Content" xml:space="preserve">
-    <value>Allow zones to span across monitors (all monitors must have the same DPI scaling)</value>
+    <value>Allow zones to span across monitors</value>
   </data>
   <data name="ImageResizer_Formatting_ActualHeight.Text" xml:space="preserve">
     <value>Actual height</value>
@@ -734,47 +722,5 @@
   </data>
   <data name="FancyZones_MoveWindowsBasedOnPositionCheckBoxControl.Content" xml:space="preserve">
     <value>Move windows based on their position</value>
-  </data>
-  <data name="GeneralSettings_NewVersionIsAvailable" xml:space="preserve">
-    <value>New update available</value>
-  </data>
-  <data name="GeneralSettings_VersionIsLatest" xml:space="preserve">
-    <value>You have the latest available version.</value>
-  </data>
-  <data name="FileExplorerPreview_IconThumbnail_GroupSettings.Text" xml:space="preserve">
-    <value>Icon Preview</value>
-  </data>
-  <data name="FileExplorerPreview_PreviewPane_GroupSettings.Text" xml:space="preserve">
-    <value>Preview Pane</value>
-  </data>
-  <data name="FileExplorerPreview_RunAsAdminRequired.Text" xml:space="preserve">
-    <value>You need to run as administrator to modify these settings</value>
-  </data>
-  <data name="FileExplorerPreview_AffectsAllUsers.Text" xml:space="preserve">
-    <value>The settings on this page affect all users on the system</value>
-  </data>
-  <data name="FileExplorerPreview_RebootRequired.Text" xml:space="preserve">
-    <value>A reboot may be required for changes to these settings to take effect</value>
-  </data>
-  <data name="FancyZones_ExcludeApps_TextBoxControl.PlaceholderText" xml:space="preserve">
-    <value>Example: outlook.exe</value>
-  </data>
-  <data name="ImageResizer_FilenameFormatPlaceholder.PlaceholderText" xml:space="preserve">
-    <value>Example: %1 (%2)</value>
-  </data>
-  <data name="ColorModeHeader.Text" xml:space="preserve">
-    <value>Choose a mode</value>
-  </data>
-  <data name="Radio_Theme_Dark.Content" xml:space="preserve">
-    <value>Dark</value>
-  </data>
-  <data name="Radio_Theme_Light.Content" xml:space="preserve">
-    <value>Light</value>
-  </data>
-  <data name="Radio_Theme_Default.Content" xml:space="preserve">
-    <value>Windows default</value>
-  </data>
-  <data name="Windows_Color_Settings.Content" xml:space="preserve">
-    <value>Windows color settings</value>
   </data>
 </root>

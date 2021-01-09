@@ -6,7 +6,6 @@
 #include "../../common/common.h"
 #include "keyboardmanager/dll/Generated Files/resource.h"
 #include "../common/keyboard_layout.h"
-#include "KeyboardManagerConstants.h"
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 using namespace winrt::Windows::Foundation;
@@ -97,15 +96,12 @@ namespace KeyboardManagerHelper
         }
     }
 
-    Collections::IVector<IInspectable> ToBoxValue(const std::vector<std::pair<DWORD, std::wstring>>& list)
+    Collections::IVector<IInspectable> ToBoxValue(const std::vector<std::wstring>& list)
     {
         Collections::IVector<IInspectable> boxList = single_threaded_vector<IInspectable>();
         for (auto& val : list)
         {
-            auto comboBox = ComboBoxItem();
-            comboBox.DataContext(winrt::box_value(std::to_wstring(val.first)));
-            comboBox.Content(winrt::box_value(val.second));
-            boxList.Append(winrt::box_value(comboBox));
+            boxList.Append(winrt::box_value(val));
         }
 
         return boxList;
@@ -177,8 +173,6 @@ namespace KeyboardManagerHelper
             return GET_RESOURCE_STRING(IDS_ERRORMESSAGE_SHORTCUTMAXONEACTIONKEY).c_str();
         case ErrorType::ShortcutMaxShortcutSizeOneActionKey:
             return GET_RESOURCE_STRING(IDS_ERRORMESSAGE_MAXSHORTCUTSIZE).c_str();
-        case ErrorType::ShortcutDisableAsActionKey:
-            return GET_RESOURCE_STRING(IDS_ERRORMESSAGE_DISABLEASACTIONKEY).c_str();
         default:
             return GET_RESOURCE_STRING(IDS_ERRORMESSAGE_DEFAULT).c_str();
         }
@@ -195,19 +189,6 @@ namespace KeyboardManagerHelper
             keyEventArray[index].ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
         }
         keyEventArray[index].ki.dwExtraInfo = extraInfo;
-
-        // Set wScan to the value from MapVirtualKey as some applications may use the scan code for handling input, for instance, Windows Terminal ignores non-character input which has scancode set to 0. 
-        // MapVirtualKey returns 0 if the key code does not correspond to a physical key (such as unassigned/reserved keys). More details at https://github.com/microsoft/PowerToys/pull/7143#issue-498877747
-        keyEventArray[index].ki.wScan = (WORD)MapVirtualKey(keyCode, MAPVK_VK_TO_VSC);
-    }
-
-    // Function to set the dummy key events used for remapping shortcuts, required to ensure releasing a modifier doesn't trigger another action (For example, Win->Start Menu or Alt->Menu bar)
-    void SetDummyKeyEvent(LPINPUT keyEventArray, int& index, ULONG_PTR extraInfo)
-    {
-        SetKeyEvent(keyEventArray, index, INPUT_KEYBOARD, (WORD)KeyboardManagerConstants::DUMMY_KEY, 0, extraInfo);
-        index++;
-        SetKeyEvent(keyEventArray, index, INPUT_KEYBOARD, (WORD)KeyboardManagerConstants::DUMMY_KEY, KEYEVENTF_KEYUP, extraInfo);
-        index++;
     }
 
     // Function to return window handle for a full screen UWP app
@@ -327,7 +308,7 @@ namespace KeyboardManagerHelper
     }
 
     // Function to filter the key codes for artificial key codes
-    int32_t FilterArtificialKeys(const int32_t& key)
+    DWORD FilterArtificialKeys(const DWORD& key)
     {
         switch (key)
         {
@@ -348,16 +329,57 @@ namespace KeyboardManagerHelper
     }
 
     // Function to check if a modifier has been repeated in the previous drop downs
-    bool CheckRepeatedModifier(const std::vector<int32_t>& currentKeys, int selectedKeyCode)
+    bool CheckRepeatedModifier(std::vector<DWORD>& currentKeys, int selectedKeyIndex, const std::vector<DWORD>& keyCodeList)
     {
-        // Count the number of keys that are equal to 'selectedKeyCode'
-        int numberOfSameType = 0;
+        // check if modifier has already been added before in a previous drop down
+        int currentDropDownIndex = -1;
+
+        // Find the key index of the current drop down selection so that we skip that index while searching for repeated modifiers
         for (int i = 0; i < currentKeys.size(); i++)
         {
-            numberOfSameType += KeyboardManagerHelper::GetKeyType(selectedKeyCode) == KeyboardManagerHelper::GetKeyType(currentKeys[i]);
+            if (currentKeys[i] == keyCodeList[selectedKeyIndex])
+            {
+                currentDropDownIndex = i;
+                break;
+            }
         }
 
-        // If we have at least two keys equal to 'selectedKeyCode' than modifier was repeated
-        return numberOfSameType > 1;
+        bool matchPreviousModifier = false;
+        for (int i = 0; i < currentKeys.size(); i++)
+        {
+            // Skip the current drop down
+            if (i != currentDropDownIndex)
+            {
+                // If the key type for the newly added key matches any of the existing keys in the shortcut
+                if (KeyboardManagerHelper::GetKeyType(keyCodeList[selectedKeyIndex]) == KeyboardManagerHelper::GetKeyType(currentKeys[i]))
+                {
+                    matchPreviousModifier = true;
+                    break;
+                }
+            }
+        }
+
+        return matchPreviousModifier;
+    }
+
+    // Function to get the selected key codes from the list of selected indices
+    std::vector<DWORD> GetKeyCodesFromSelectedIndices(const std::vector<int32_t>& selectedIndices, const std::vector<DWORD>& keyCodeList)
+    {
+        std::vector<DWORD> keys;
+
+        for (int i = 0; i < selectedIndices.size(); i++)
+        {
+            int selectedKeyIndex = selectedIndices[i];
+            if (selectedKeyIndex != -1 && keyCodeList.size() > selectedKeyIndex)
+            {
+                // If None is not the selected key
+                if (keyCodeList[selectedKeyIndex] != 0)
+                {
+                    keys.push_back(keyCodeList[selectedKeyIndex]);
+                }
+            }
+        }
+
+        return keys;
     }
 }

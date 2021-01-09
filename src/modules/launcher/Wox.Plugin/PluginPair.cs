@@ -2,8 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-
 namespace Wox.Plugin
 {
     public class PluginPair
@@ -21,8 +19,7 @@ namespace Wox.Plugin
         {
             if (obj is PluginPair r)
             {
-                // Using Ordinal since this is used internally
-                return string.Equals(r.Metadata.ID, Metadata.ID, StringComparison.Ordinal);
+                return string.Equals(r.Metadata.ID, Metadata.ID);
             }
             else
             {
@@ -32,8 +29,7 @@ namespace Wox.Plugin
 
         public override int GetHashCode()
         {
-            // Using Ordinal since this is used internally
-            var hashcode = Metadata.ID?.GetHashCode(StringComparison.Ordinal) ?? 0;
+            var hashcode = Metadata.ID?.GetHashCode() ?? 0;
             return hashcode;
         }
     }

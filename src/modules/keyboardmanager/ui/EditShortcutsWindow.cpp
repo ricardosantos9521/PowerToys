@@ -179,7 +179,6 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     shortcutTable.ColumnDefinitions().Append(targetAppColumn);
     shortcutTable.ColumnDefinitions().Append(removeColumn);
     shortcutTable.RowDefinitions().Append(RowDefinition());
-    shortcutTable.MinWidth(KeyboardManagerConstants::EditShortcutsTableMinWidth);
 
     // First header textblock in the header row of the shortcut table
     TextBlock originalShortcutHeader;
@@ -226,20 +225,17 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     keyboardManagerState.SetUIState(KeyboardManagerUIState::EditShortcutsWindowActivated, _hWndEditShortcutsWindow);
 
     // Load existing os level shortcuts into UI
-    // Create copy of the remaps to avoid concurrent access
-    ShortcutRemapTable osLevelShortcutReMapCopy = keyboardManagerState.osLevelShortcutReMap;
-
-    for (const auto& it : osLevelShortcutReMapCopy)
+    std::unique_lock<std::mutex> lockOSLevel(keyboardManagerState.osLevelShortcutReMap_mutex);
+    for (const auto& it : keyboardManagerState.osLevelShortcutReMap)
     {
         ShortcutControl::AddNewShortcutControlRow(shortcutTable, keyboardRemapControlObjects, it.first, it.second.targetShortcut);
     }
+    lockOSLevel.unlock();
 
     // Load existing app-specific shortcuts into UI
-    // Create copy of the remaps to avoid concurrent access
-    AppSpecificShortcutRemapTable appSpecificShortcutReMapCopy = keyboardManagerState.appSpecificShortcutReMap;
-
+    std::unique_lock<std::mutex> lockAppSpecific(keyboardManagerState.appSpecificShortcutReMap_mutex);
     // Iterate through all the apps
-    for (const auto& itApp : appSpecificShortcutReMapCopy)
+    for (const auto& itApp : keyboardManagerState.appSpecificShortcutReMap)
     {
         // Iterate through shortcuts for each app
         for (const auto& itShortcut : itApp.second)
@@ -247,6 +243,7 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
             ShortcutControl::AddNewShortcutControlRow(shortcutTable, keyboardRemapControlObjects, itShortcut.first, itShortcut.second.targetShortcut, itApp.first);
         }
     }
+    lockAppSpecific.unlock();
 
     // Apply button
     Button applyButton;
@@ -258,13 +255,9 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     header.SetLeftOf(applyButton, cancelButton);
 
     auto ApplyRemappings = [&keyboardManagerState, _hWndEditShortcutsWindow]() {
-        // Disable the remappings while the remapping table is updated
-        keyboardManagerState.RemappingsDisabledWrapper(
-            [&keyboardManagerState]() {
-                LoadingAndSavingRemappingHelper::ApplyShortcutRemappings(keyboardManagerState, ShortcutControl::shortcutRemapBuffer, true);
-                // Save the updated key remaps to file.
-                bool saveResult = keyboardManagerState.SaveConfigToFile();
-            });
+        LoadingAndSavingRemappingHelper::ApplyShortcutRemappings(keyboardManagerState, ShortcutControl::shortcutRemapBuffer, true);
+        // Save the updated key remaps to file.
+        bool saveResult = keyboardManagerState.SaveConfigToFile();
         PostMessage(_hWndEditShortcutsWindow, WM_CLOSE, 0, 0);
     };
 
@@ -277,10 +270,6 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     header.Children().Append(cancelButton);
 
     ScrollViewer scrollViewer;
-    scrollViewer.VerticalScrollMode(ScrollMode::Enabled);
-    scrollViewer.HorizontalScrollMode(ScrollMode::Enabled);
-    scrollViewer.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
-    scrollViewer.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
 
     // Add shortcut button
     Windows::UI::Xaml::Controls::Button addShortcut;
@@ -295,38 +284,21 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
         scrollViewer.ChangeView(nullptr, scrollViewer.ScrollableHeight(), nullptr);
     });
 
-    // Set accessible name for the add shortcut button
-    addShortcut.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_ADD_SHORTCUT_BUTTON)));
-
-    // Add tooltip for add button which would appear on hover
-    ToolTip addShortcuttoolTip;
-    addShortcuttoolTip.Content(box_value(GET_RESOURCE_STRING(IDS_ADD_SHORTCUT_BUTTON)));
-    ToolTipService::SetToolTip(addShortcut, addShortcuttoolTip);
-
-    // Header and example text at the top of the window
-    StackPanel helperText;
-    helperText.Children().Append(shortcutRemapInfoHeader);
-    helperText.Children().Append(shortcutRemapInfoExample);
-
-    // Remapping table
     StackPanel mappingsPanel;
+    mappingsPanel.Children().Append(shortcutRemapInfoHeader);
+    mappingsPanel.Children().Append(shortcutRemapInfoExample);
     mappingsPanel.Children().Append(shortcutTable);
     mappingsPanel.Children().Append(addShortcut);
 
-    // Remapping table should be scrollable
     scrollViewer.Content(mappingsPanel);
 
     RelativePanel xamlContainer;
-    xamlContainer.SetBelow(helperText, header);
-    xamlContainer.SetBelow(scrollViewer, helperText);
+    xamlContainer.SetBelow(scrollViewer, header);
     xamlContainer.SetAlignLeftWithPanel(header, true);
     xamlContainer.SetAlignRightWithPanel(header, true);
-    xamlContainer.SetAlignLeftWithPanel(helperText, true);
-    xamlContainer.SetAlignRightWithPanel(helperText, true);
     xamlContainer.SetAlignLeftWithPanel(scrollViewer, true);
     xamlContainer.SetAlignRightWithPanel(scrollViewer, true);
     xamlContainer.Children().Append(header);
-    xamlContainer.Children().Append(helperText);
     xamlContainer.Children().Append(scrollViewer);
     xamlContainer.UpdateLayout();
 
@@ -348,7 +320,6 @@ void createEditShortcutsWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMa
     hwndLock.lock();
     hwndEditShortcutsNativeWindow = nullptr;
     keyboardManagerState.ResetUIState();
-    keyboardManagerState.ClearRegisteredKeyDelays();
 
     // Cannot be done in WM_DESTROY because that causes crashes due to fatal app exit
     xamlBridge.ClearXamlIslands();
@@ -362,22 +333,9 @@ LRESULT CALLBACK EditShortcutsWindowProc(HWND hWnd, UINT messageCode, WPARAM wPa
     // Resize the XAML window whenever the parent window is painted or resized
     case WM_PAINT:
     case WM_SIZE:
-    {
         GetClientRect(hWnd, &rcClient);
         SetWindowPos(hWndXamlIslandEditShortcutsWindow, 0, rcClient.left, rcClient.top, rcClient.right, rcClient.bottom, SWP_SHOWWINDOW);
-    }
-    break;
-    // To avoid UI elements overlapping on making the window smaller enforce a minimum window size
-    case WM_GETMINMAXINFO:
-    {
-        LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
-        int minWidth = KeyboardManagerConstants::MinimumEditShortcutsWindowWidth;
-        int minHeight = KeyboardManagerConstants::MinimumEditShortcutsWindowHeight;
-        DPIAware::Convert(nullptr, minWidth, minHeight);
-        lpMMI->ptMinTrackSize.x = minWidth;
-        lpMMI->ptMinTrackSize.y = minHeight;
-    }
-    break;
+        break;
     default:
         // If the Xaml Bridge object exists, then use it's message handler to handle keyboard focus operations
         if (xamlBridgePtr != nullptr)

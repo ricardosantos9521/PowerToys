@@ -66,16 +66,15 @@ void github_update_worker()
     }
 }
 
-std::wstring check_for_updates()
+void check_for_updates()
 {
     try
     {
-        return updating::check_new_version_available().get();
+        updating::check_new_version_available();
     }
     catch (...)
     {
         // Couldn't autoupdate
-        return std::wstring();
     }
 }
 

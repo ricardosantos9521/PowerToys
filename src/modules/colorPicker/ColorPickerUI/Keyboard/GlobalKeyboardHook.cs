@@ -6,7 +6,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using static ColorPicker.NativeMethods;
+using static ColorPicker.Win32Apis;
 
 namespace ColorPicker.Keyboard
 {

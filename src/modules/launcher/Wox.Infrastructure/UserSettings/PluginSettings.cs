@@ -20,7 +20,7 @@ namespace Wox.Infrastructure.UserSettings
                     var settings = Plugins[metadata.ID];
                     if (settings.ActionKeywords?.Count > 0)
                     {
-                        metadata.SetActionKeywords(settings.ActionKeywords);
+                        metadata.ActionKeywords = settings.ActionKeywords;
                         metadata.ActionKeyword = settings.ActionKeywords[0];
                     }
 
@@ -32,7 +32,7 @@ namespace Wox.Infrastructure.UserSettings
                     {
                         ID = metadata.ID,
                         Name = metadata.Name,
-                        ActionKeywords = metadata.GetActionKeywords(),
+                        ActionKeywords = metadata.ActionKeywords,
                         Disabled = metadata.Disabled,
                     };
                 }

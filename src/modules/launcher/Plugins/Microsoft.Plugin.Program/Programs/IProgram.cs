@@ -9,9 +9,9 @@ namespace Microsoft.Plugin.Program.Programs
 {
     public interface IProgram
     {
-        List<ContextMenuResult> ContextMenus(string queryArguments, IPublicAPI api);
+        List<ContextMenuResult> ContextMenus(IPublicAPI api);
 
-        Result Result(string query, string queryArguments, IPublicAPI api);
+        Result Result(string query, IPublicAPI api);
 
         string UniqueIdentifier { get; set; }
 
@@ -20,7 +20,5 @@ namespace Microsoft.Plugin.Program.Programs
         string Description { get; set; }
 
         string Location { get; }
-
-        bool Enabled { get; set; }
     }
 }

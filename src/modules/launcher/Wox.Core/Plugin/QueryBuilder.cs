@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Mono.Collections.Generic;
 using Wox.Plugin;
 
 namespace Wox.Core.Plugin
@@ -14,16 +13,6 @@ namespace Wox.Core.Plugin
     {
         public static Dictionary<PluginPair, Query> Build(ref string text, Dictionary<string, PluginPair> nonGlobalPlugins)
         {
-            if (text == null)
-            {
-                throw new ArgumentNullException(nameof(text));
-            }
-
-            if (nonGlobalPlugins == null)
-            {
-                throw new ArgumentNullException(nameof(nonGlobalPlugins));
-            }
-
             // replace multiple white spaces with one white space
             var terms = text.Split(new[] { Query.TermSeparator }, StringSplitOptions.RemoveEmptyEntries);
             if (terms.Length == 0)
@@ -43,8 +32,7 @@ namespace Wox.Core.Plugin
 
             foreach (string pluginActionKeyword in nonGlobalPlugins.Keys)
             {
-                // Using Ordinal since this is used internally
-                if (possibleActionKeyword.StartsWith(pluginActionKeyword, StringComparison.Ordinal))
+                if (possibleActionKeyword.StartsWith(pluginActionKeyword))
                 {
                     if (nonGlobalPlugins.TryGetValue(pluginActionKeyword, out var pluginPair) && !pluginPair.Metadata.Disabled)
                     {
@@ -64,27 +52,19 @@ namespace Wox.Core.Plugin
                         }
 
                         // A new query is constructed for each plugin as they have different action keywords
-                        var query = new Query(rawQuery, search, new ReadOnlyCollection<string>(terms), pluginActionKeyword);
+                        var query = new Query(rawQuery, search, terms, pluginActionKeyword);
 
                         pluginQueryPair.TryAdd(pluginPair, query);
                     }
                 }
             }
 
-            // If the user has specified a matching action keyword, then do not
-            // add the global plugins to the list.
-            if (pluginQueryPair.Count == 0)
-            {
-                var globalplugins = PluginManager.GlobalPlugins;
+            var globalplugins = PluginManager.GlobalPlugins;
 
-                foreach (PluginPair globalPlugin in PluginManager.GlobalPlugins)
-                {
-                    if (!pluginQueryPair.ContainsKey(globalPlugin))
-                    {
-                        var query = new Query(rawQuery, rawQuery, new ReadOnlyCollection<string>(terms), string.Empty);
-                        pluginQueryPair.Add(globalPlugin, query);
-                    }
-                }
+            foreach (PluginPair globalPlugin in PluginManager.GlobalPlugins)
+            {
+                var query = new Query(rawQuery, rawQuery, terms, string.Empty);
+                pluginQueryPair.Add(globalPlugin, query);
             }
 
             return pluginQueryPair;

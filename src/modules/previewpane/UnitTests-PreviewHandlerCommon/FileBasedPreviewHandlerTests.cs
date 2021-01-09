@@ -7,12 +7,12 @@ using Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace PreviewHandlerCommonUnitTests
+namespace UnitTests_PreviewHandlerCommon
 {
     [TestClass]
     public class FileBasedPreviewHandlerTests
     {
-        internal class TestFileBasedPreviewHandler : FileBasedPreviewHandler
+        public class TestFileBasedPreviewHandler : FileBasedPreviewHandler
         {
             public override void DoPreview()
             {
@@ -28,7 +28,7 @@ namespace PreviewHandlerCommonUnitTests
         [DataTestMethod]
         [DataRow(0U)]
         [DataRow(1U)]
-        public void FileBasedPreviewHandlerShouldSetFilePathWhenInitializeCalled(uint grfMode)
+        public void FileBasedPreviewHandler_ShouldSetFilePath_WhenInitializeCalled(uint grfMode)
         {
             // Arrange
             var fileBasedPreviewHandler = new TestFileBasedPreviewHandler();
@@ -38,7 +38,7 @@ namespace PreviewHandlerCommonUnitTests
             fileBasedPreviewHandler.Initialize(filePath, grfMode);
 
             // Assert
-            Assert.AreEqual(filePath, fileBasedPreviewHandler.FilePath);
+            Assert.AreEqual(fileBasedPreviewHandler.FilePath, filePath);
         }
     }
 }

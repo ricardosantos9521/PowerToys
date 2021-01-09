@@ -4,8 +4,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels;
+using Microsoft.PowerToys.Settings.UI.Lib;
+using Microsoft.PowerToys.Settings.UI.Lib.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ViewModelTests
@@ -13,7 +13,7 @@ namespace ViewModelTests
     [TestClass]
     public class KeyboardManager
     {
-        public const string Module = KeyboardManagerSettings.ModuleName;
+        public const string Module = "Keyboard Manager";
 
         [TestInitialize]
         public void Setup()
@@ -26,7 +26,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void CombineShortcutListsShouldReturnEmptyListWhenBothArgumentsAreEmptyLists()
+        public void CombineShortcutLists_ShouldReturnEmptyList_WhenBothArgumentsAreEmptyLists()
         {
             // arrange
             var firstList = new List<KeysDataModel>();
@@ -38,74 +38,11 @@ namespace ViewModelTests
             // Assert
             var expectedResult = new List<AppSpecificKeysDataModel>();
 
-            Assert.AreEqual(expectedResult.Count, result.Count);
+            Assert.AreEqual(expectedResult.Count(), result.Count());
         }
 
         [TestMethod]
-        public void CombineShortcutListsShouldReturnEmptyListWhenBothArgumentsAreNull()
-        {
-            // act
-            var result = KeyboardManagerViewModel.CombineShortcutLists(null, null);
-
-            // Assert
-            var expectedResult = new List<AppSpecificKeysDataModel>();
-
-            Assert.AreEqual(expectedResult.Count, result.Count);
-        }
-
-        [TestMethod]
-        public void CombineShortcutListsShouldReturnListWithOneAppSpecificEntryWhenFirstArgumentIsNullAndSecondArgumentHasOneEntry()
-        {
-            // arrange
-            var secondList = new List<AppSpecificKeysDataModel>();
-            var entry = new AppSpecificKeysDataModel();
-            entry.OriginalKeys = "17;65";
-            entry.NewRemapKeys = "17;86";
-            entry.TargetApp = "msedge";
-            secondList.Add(entry);
-
-            // act
-            var result = KeyboardManagerViewModel.CombineShortcutLists(null, secondList);
-
-            // Assert
-            var expectedResult = new List<AppSpecificKeysDataModel>();
-            var expectedEntry = new AppSpecificKeysDataModel();
-            expectedEntry.OriginalKeys = entry.OriginalKeys;
-            expectedEntry.NewRemapKeys = entry.NewRemapKeys;
-            expectedEntry.TargetApp = entry.TargetApp;
-            expectedResult.Add(expectedEntry);
-
-            Assert.AreEqual(expectedResult.Count, result.Count);
-            Assert.IsTrue(expectedResult[0].Compare(result[0]));
-        }
-
-        [TestMethod]
-        public void CombineShortcutListsShouldReturnListWithOneAllAppsEntryWhenFirstArgumentHasOneEntryAndSecondArgumentIsNull()
-        {
-            // arrange
-            var firstList = new List<KeysDataModel>();
-            var entry = new KeysDataModel();
-            entry.OriginalKeys = "17;65";
-            entry.NewRemapKeys = "17;86";
-            firstList.Add(entry);
-
-            // act
-            var result = KeyboardManagerViewModel.CombineShortcutLists(firstList, null);
-
-            // Assert
-            var expectedResult = new List<AppSpecificKeysDataModel>();
-            var expectedEntry = new AppSpecificKeysDataModel();
-            expectedEntry.OriginalKeys = entry.OriginalKeys;
-            expectedEntry.NewRemapKeys = entry.NewRemapKeys;
-            expectedEntry.TargetApp = "All Apps";
-            expectedResult.Add(expectedEntry);
-
-            Assert.AreEqual(expectedResult.Count, result.Count);
-            Assert.IsTrue(expectedResult[0].Compare(result[0]));
-        }
-
-        [TestMethod]
-        public void CombineShortcutListsShouldReturnListWithOneAllAppsEntryWhenFirstArgumentHasOneEntryAndSecondArgumentIsEmpty()
+        public void CombineShortcutLists_ShouldReturnListWithOneAllAppsEntry_WhenFirstArgumentHasOneEntryAndSecondArgumentIsEmpty()
         {
             // arrange
             var firstList = new List<KeysDataModel>();
@@ -126,12 +63,12 @@ namespace ViewModelTests
             expectedEntry.TargetApp = "All Apps";
             expectedResult.Add(expectedEntry);
             var x = expectedResult[0].Equals(result[0]);
-            Assert.AreEqual(expectedResult.Count, result.Count);
+            Assert.AreEqual(expectedResult.Count(), result.Count());
             Assert.IsTrue(expectedResult[0].Compare(result[0]));
         }
 
         [TestMethod]
-        public void CombineShortcutListsShouldReturnListWithOneAppSpecificEntryWhenFirstArgumentIsEmptyAndSecondArgumentHasOneEntry()
+        public void CombineShortcutLists_ShouldReturnListWithOneAppSpecificEntry_WhenFirstArgumentIsEmptyAndSecondArgumentHasOneEntry()
         {
             // arrange
             var firstList = new List<KeysDataModel>();
@@ -153,12 +90,12 @@ namespace ViewModelTests
             expectedEntry.TargetApp = entry.TargetApp;
             expectedResult.Add(expectedEntry);
 
-            Assert.AreEqual(expectedResult.Count, result.Count);
+            Assert.AreEqual(expectedResult.Count(), result.Count());
             Assert.IsTrue(expectedResult[0].Compare(result[0]));
         }
 
         [TestMethod]
-        public void CombineShortcutListsShouldReturnListWithOneAllAppsEntryAndOneAppSpecificEntryWhenFirstArgumentHasOneEntryAndSecondArgumentHasOneEntry()
+        public void CombineShortcutLists_ShouldReturnListWithOneAllAppsEntryAndOneAppSpecificEntry_WhenFirstArgumentHasOneEntryAndSecondArgumentHasOneEntry()
         {
             // arrange
             var firstList = new List<KeysDataModel>();
@@ -189,7 +126,7 @@ namespace ViewModelTests
             expectedSecondEntry.TargetApp = secondListEntry.TargetApp;
             expectedResult.Add(expectedSecondEntry);
 
-            Assert.AreEqual(expectedResult.Count, result.Count);
+            Assert.AreEqual(expectedResult.Count(), result.Count());
             Assert.IsTrue(expectedResult[0].Compare(result[0]));
             Assert.IsTrue(expectedResult[1].Compare(result[1]));
         }

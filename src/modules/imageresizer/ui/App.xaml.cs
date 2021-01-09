@@ -5,6 +5,7 @@
 using System;
 using System.Text;
 using System.Windows;
+using GalaSoft.MvvmLight.Threading;
 using ImageResizer.Models;
 using ImageResizer.Properties;
 using ImageResizer.Utilities;
@@ -18,11 +19,12 @@ namespace ImageResizer
         static App()
         {
             Console.InputEncoding = Encoding.Unicode;
+            DispatcherHelper.Initialize();
         }
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            var batch = ResizeBatch.FromCommandLine(Console.In, e?.Args);
+            var batch = ResizeBatch.FromCommandLine(Console.In, e.Args);
 
             // TODO: Add command-line parameters that can be used in lieu of the input page (issue #14)
             var mainWindow = new MainWindow(new MainViewModel(batch, Settings.Default));
@@ -32,12 +34,12 @@ namespace ImageResizer
             BecomeForegroundWindow(new System.Windows.Interop.WindowInteropHelper(mainWindow).Handle);
         }
 
-        private static void BecomeForegroundWindow(IntPtr hWnd)
+        private void BecomeForegroundWindow(IntPtr hWnd)
         {
-            NativeMethods.INPUT input = new NativeMethods.INPUT { type = NativeMethods.INPUTTYPE.INPUT_MOUSE, data = { } };
-            NativeMethods.INPUT[] inputs = new NativeMethods.INPUT[] { input };
-            _ = NativeMethods.SendInput(1, inputs, NativeMethods.INPUT.Size);
-            NativeMethods.SetForegroundWindow(hWnd);
+            Win32Helpers.INPUT input = new Win32Helpers.INPUT { type = Win32Helpers.INPUTTYPE.INPUT_MOUSE, data = { } };
+            Win32Helpers.INPUT[] inputs = new Win32Helpers.INPUT[] { input };
+            Win32Helpers.SendInput(1, inputs, Win32Helpers.INPUT.Size);
+            Win32Helpers.SetForegroundWindow(hWnd);
         }
     }
 }

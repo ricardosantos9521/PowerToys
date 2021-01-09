@@ -12,7 +12,6 @@
 #include <lib/FancyZones.h>
 #include <lib/FancyZonesData.h>
 #include <lib/FancyZonesWinHookEventIDs.h>
-#include <lib/FancyZonesData.cpp>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -38,16 +37,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 class FancyZonesModule : public PowertoyModuleIface
 {
 public:
-    // Return the localized display name of the powertoy
+    // Return the display name of the powertoy, this will be cached
     virtual PCWSTR get_name() override
     {
         return app_name.c_str();
-    }
-
-    // Return the non localized key of the powertoy, this will be cached by the runner
-    virtual const wchar_t* get_key() override
-    {
-        return app_key.c_str();
     }
 
     // Return JSON with the configuration options.
@@ -78,7 +71,7 @@ public:
         {
             InitializeWinhookEventIds();
             Trace::FancyZones::EnableFancyZones(true);
-            m_app = MakeFancyZones(reinterpret_cast<HINSTANCE>(&__ImageBase), m_settings, std::bind(&FancyZonesModule::disable, this));
+            m_app = MakeFancyZones(reinterpret_cast<HINSTANCE>(&__ImageBase), m_settings);
 #if defined(DISABLE_LOWLEVEL_HOOKS_WHEN_DEBUGGED)
             const bool hook_disabled = IsDebuggerPresent();
 #else
@@ -89,10 +82,10 @@ public:
                 s_llKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), NULL);
                 if (!s_llKeyboardHook)
                 {
-                    DWORD errorCode = GetLastError();
-                    show_last_error_message(L"SetWindowsHookEx", errorCode, GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str());
-                    auto errorMessage = get_last_error_message(errorCode);
-                    Trace::FancyZones::Error(errorCode, errorMessage.has_value() ? errorMessage.value() : L"", L"enable.SetWindowsHookEx");
+                    MessageBoxW(NULL,
+                                GET_RESOURCE_STRING(IDS_KEYBOARD_LISTENER_ERROR).c_str(),
+                                GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str(),
+                                MB_OK | MB_ICONERROR);
                 }
             }
 
@@ -136,7 +129,7 @@ public:
     // Returns if the powertoy is enabled
     virtual bool is_enabled() override
     {
-        return m_app != nullptr;
+        return (m_app != nullptr);
     }
 
     // Destroy the powertoy and free memory
@@ -149,8 +142,7 @@ public:
     FancyZonesModule()
     {
         app_name = GET_RESOURCE_STRING(IDS_FANCYZONES);
-        app_key = NonLocalizable::FancyZonesStr;
-        m_settings = MakeFancyZonesSettings(reinterpret_cast<HINSTANCE>(&__ImageBase), FancyZonesModule::get_name(), FancyZonesModule::get_key());
+        m_settings = MakeFancyZonesSettings(reinterpret_cast<HINSTANCE>(&__ImageBase), FancyZonesModule::get_name());
         FancyZonesDataInstance().LoadFancyZonesData();
         s_instance = this;
     }
@@ -198,8 +190,6 @@ private:
     winrt::com_ptr<IFancyZones> m_app;
     winrt::com_ptr<IFancyZonesSettings> m_settings;
     std::wstring app_name;
-    //contains the non localized key of the powertoy
-    std::wstring app_key;
 
     static inline FancyZonesModule* s_instance;
     static inline HHOOK s_llKeyboardHook;

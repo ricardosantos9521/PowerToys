@@ -18,7 +18,6 @@ public:
     OnThreadExecutor();
     ~OnThreadExecutor();
     std::future<void> submit(task_t task);
-    void cancel();
 
 private:
     void worker_thread();

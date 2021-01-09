@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cinttypes>
-
 using namespace System::Threading;
 using namespace System::Collections::Generic;
 
@@ -12,7 +10,6 @@ public
     {
         WPARAM message;
         int key;
-        uint64_t dwExtraInfo;
     };
 
 public

@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -17,7 +16,6 @@ namespace Wox.Plugin
         private ToolTipData _toolTipData;
         private string _pluginDirectory;
         private string _icoPath;
-        private IList<int> _titleHighlightData;
 
         public string Title
         {
@@ -28,13 +26,7 @@ namespace Wox.Plugin
 
             set
             {
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
-
-                // Using Ordinal since this is used internally
-                _title = value.Replace("\n", " ", StringComparison.Ordinal);
+                _title = value.Replace("\n", " ");
             }
         }
 
@@ -43,8 +35,6 @@ namespace Wox.Plugin
         public string Glyph { get; set; }
 
         public string FontFamily { get; set; }
-
-        public string ProgramArguments { get; set; }
 
         public Visibility ToolTipVisibility { get; set; } = Visibility.Collapsed;
 
@@ -98,32 +88,15 @@ namespace Wox.Plugin
 
         public int Score { get; set; }
 
-        public Result(IList<int> titleHighlightData = null, IList<int> subTitleHighlightData = null)
-        {
-            _titleHighlightData = titleHighlightData;
-            SubTitleHighlightData = subTitleHighlightData;
-        }
+        /// <summary>
+        /// Gets or sets a list of indexes for the characters to be highlighted in Title
+        /// </summary>
+        public IList<int> TitleHighlightData { get; set; }
 
         /// <summary>
-        /// Gets a list of indexes for the characters to be highlighted in Title
+        /// Gets or sets a list of indexes for the characters to be highlighted in SubTitle
         /// </summary>
-        public IList<int> GetTitleHighlightData()
-        {
-            return _titleHighlightData;
-        }
-
-        /// <summary>
-        /// Sets a list of indexes for the characters to be highlighted in Title
-        /// </summary>
-        public void SetTitleHighlightData(IList<int> value)
-        {
-            _titleHighlightData = value;
-        }
-
-        /// <summary>
-        /// Gets a list of indexes for the characters to be highlighted in SubTitle
-        /// </summary>
-        public IList<int> SubTitleHighlightData { get; private set; }
+        public IList<int> SubTitleHighlightData { get; set; }
 
         /// <summary>
         /// Gets or sets only results that originQuery match with current query will be displayed in the panel
@@ -154,11 +127,10 @@ namespace Wox.Plugin
         {
             var r = obj as Result;
 
-            // Using Ordinal since this is used internally
-            var equality = string.Equals(r?.Title, Title, StringComparison.Ordinal) &&
-                           string.Equals(r?.SubTitle, SubTitle, StringComparison.Ordinal) &&
-                           string.Equals(r?.IcoPath, IcoPath, StringComparison.Ordinal) &&
-                           GetTitleHighlightData() == r.GetTitleHighlightData() &&
+            var equality = string.Equals(r?.Title, Title) &&
+                           string.Equals(r?.SubTitle, SubTitle) &&
+                           string.Equals(r?.IcoPath, IcoPath) &&
+                           TitleHighlightData == r.TitleHighlightData &&
                            SubTitleHighlightData == r.SubTitleHighlightData;
 
             return equality;
@@ -166,16 +138,18 @@ namespace Wox.Plugin
 
         public override int GetHashCode()
         {
-            // Using Ordinal since this is used internally
-            var hashcode = (Title?.GetHashCode(StringComparison.Ordinal) ?? 0) ^
-                           (SubTitle?.GetHashCode(StringComparison.Ordinal) ?? 0);
+            var hashcode = (Title?.GetHashCode() ?? 0) ^
+                           (SubTitle?.GetHashCode() ?? 0);
             return hashcode;
         }
 
         public override string ToString()
         {
-            // Using CurrentCulture since this is user facing
-            return string.Format(CultureInfo.CurrentCulture, "{0} : {1}", Title, SubTitle);
+            return Title + SubTitle;
+        }
+
+        public Result()
+        {
         }
 
         /// <summary>

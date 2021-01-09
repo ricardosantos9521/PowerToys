@@ -114,6 +114,5 @@ namespace FancyZonesDataTypes
         bool showSpacing;
         int spacing;
         int zoneCount;
-        int sensitivityRadius;
     };
 }

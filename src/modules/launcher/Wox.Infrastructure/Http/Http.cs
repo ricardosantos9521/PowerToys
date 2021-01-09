@@ -5,12 +5,11 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.UserSettings;
-using Wox.Plugin.Logger;
 
 namespace Wox.Infrastructure.Http
 {
@@ -62,8 +61,7 @@ namespace Wox.Infrastructure.Http
 
         public static async Task<string> Get([NotNull] string url, string encoding = "UTF-8")
         {
-            Log.Debug($"Url <{url}>", MethodBase.GetCurrentMethod().DeclaringType);
-
+            Log.Debug($"|Http.Get|Url <{url}>");
             var request = WebRequest.CreateHttp(url);
             request.Method = "GET";
             request.Timeout = 1000;

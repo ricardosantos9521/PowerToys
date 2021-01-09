@@ -7,7 +7,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Wox.Plugin.Logger;
+using Wox.Infrastructure.Logger;
 
 namespace Wox.Infrastructure.Storage
 {
@@ -38,7 +38,7 @@ namespace Wox.Infrastructure.Storage
             }
             catch (ArgumentException e)
             {
-                Log.Info($"Trying to insert a duplicate item {e.Message}", GetType());
+                Log.Info($"|LisRepository.Set| Trying to insert a duplicate item", e.Message);
             }
         }
 
@@ -51,7 +51,7 @@ namespace Wox.Infrastructure.Storage
         {
             if (!_items.TryAdd(insertedItem.GetHashCode(), insertedItem))
             {
-                Log.Error($"Item Already Exists <{insertedItem}>", GetType());
+                Log.Error($"|ListRepository.Add| Item Already Exists <{insertedItem}>");
             }
         }
 
@@ -59,7 +59,7 @@ namespace Wox.Infrastructure.Storage
         {
             if (!_items.TryRemove(removedItem.GetHashCode(), out _))
             {
-                Log.Error($"Item Not Found <{removedItem}>", GetType());
+                Log.Error($"|ListRepository.Remove| Item Not Found <{removedItem}>");
             }
         }
 

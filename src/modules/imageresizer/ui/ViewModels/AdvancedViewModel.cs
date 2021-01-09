@@ -7,15 +7,18 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using ImageResizer.Helpers;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using ImageResizer.Models;
 using ImageResizer.Properties;
 
 namespace ImageResizer.ViewModels
 {
-    public class AdvancedViewModel : Observable
+    public class AdvancedViewModel : ViewModelBase
     {
-        private static Dictionary<Guid, string> InitEncoderMap()
+        private static readonly IDictionary<Guid, string> _encoderMap;
+
+        static AdvancedViewModel()
         {
             var bmpCodec = new BmpBitmapEncoder().CodecInfo;
             var gifCodec = new GifBitmapEncoder().CodecInfo;
@@ -24,7 +27,7 @@ namespace ImageResizer.ViewModels
             var tiffCodec = new TiffBitmapEncoder().CodecInfo;
             var wmpCodec = new WmpBitmapEncoder().CodecInfo;
 
-            return new Dictionary<Guid, string>
+            _encoderMap = new Dictionary<Guid, string>
             {
                 [bmpCodec.ContainerFormat] = bmpCodec.FriendlyName,
                 [gifCodec.ContainerFormat] = gifCodec.FriendlyName,
@@ -42,15 +45,17 @@ namespace ImageResizer.ViewModels
             Settings = settings;
         }
 
-        public static IDictionary<Guid, string> EncoderMap { get; } = InitEncoderMap();
+        public static IDictionary<Guid, string> EncoderMap
+            => _encoderMap;
 
         public Settings Settings { get; }
 
-        public static string Version
+        public string Version
             => typeof(AdvancedViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion;
 
-        public static IEnumerable<Guid> Encoders => EncoderMap.Keys;
+        public IEnumerable<Guid> Encoders
+            => _encoderMap.Keys;
 
         public ICommand RemoveSizeCommand { get; }
 

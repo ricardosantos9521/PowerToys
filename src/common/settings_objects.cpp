@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "settings_objects.h"
 #include "settings_helpers.h"
-#include <winrt/base.h>
 
 namespace PowerToysSettings
 {
@@ -278,33 +277,27 @@ namespace PowerToysSettings
         return L"RESOURCE ID NOT FOUND: " + std::to_wstring(resource_id);
     }
 
-    PowerToyValues::PowerToyValues(std::wstring_view powertoy_name, std::wstring_view powertoy_key)
+    PowerToyValues::PowerToyValues(std::wstring_view powertoy_name)
     {
-        _key = powertoy_key;
+        _name = powertoy_name;
         set_version();
         m_json.SetNamedValue(L"name", json::value(powertoy_name));
         m_json.SetNamedValue(L"properties", json::JsonObject{});
     }
 
-    PowerToyValues PowerToyValues::from_json_string(std::wstring_view json, std::wstring_view powertoy_key)
+    PowerToyValues PowerToyValues::from_json_string(std::wstring_view json)
     {
         PowerToyValues result = PowerToyValues();
-        json::JsonObject jsonObject = json::JsonValue::Parse(json).GetObjectW();
-        if (!jsonObject.HasKey(L"name"))
-        {
-            throw winrt::hresult_error(E_NOT_SET, L"name field not set");
-        }
-
         result.m_json = json::JsonValue::Parse(json).GetObjectW();
-        result._key = powertoy_key;
+        result._name = result.m_json.GetNamedString(L"name");
         return result;
     }
 
-    PowerToyValues PowerToyValues::load_from_settings_file(std::wstring_view powertoy_key)
+    PowerToyValues PowerToyValues::load_from_settings_file(std::wstring_view powertoy_name)
     {
         PowerToyValues result = PowerToyValues();
-        result.m_json = PTSettingsHelper::load_module_settings(powertoy_key);
-        result._key = powertoy_key;
+        result.m_json = PTSettingsHelper::load_module_settings(powertoy_name);
+        result._name = powertoy_name;
         return result;
     }
 
@@ -350,11 +343,6 @@ namespace PowerToysSettings
         return m_json.GetNamedObject(L"properties").GetNamedObject(property_name).GetNamedObject(L"value");
     }
 
-    json::JsonObject PowerToyValues::get_raw_json()
-    {
-        return m_json;
-    }
-
     std::wstring PowerToyValues::serialize()
     {
         set_version();
@@ -364,7 +352,7 @@ namespace PowerToysSettings
     void PowerToyValues::save_to_settings_file()
     {
         set_version();
-        PTSettingsHelper::save_module_settings(_key, m_json);
+        PTSettingsHelper::save_module_settings(_name, m_json);
     }
 
     void PowerToyValues::set_version()

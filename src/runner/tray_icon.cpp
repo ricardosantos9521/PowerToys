@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Generated files/resource.h"
+#include "resource.h"
 #include "settings_window.h"
 #include "tray_icon.h"
 #include <Windows.h>

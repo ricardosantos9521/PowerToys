@@ -15,7 +15,7 @@ namespace ImageResizer.Views
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var output = Resources.ResourceManager.GetString(Enum.GetName(typeof(ResizeUnit), value), culture);
+            var output = Resources.ResourceManager.GetString(Enum.GetName(typeof(ResizeUnit), value));
 
             if ((string)parameter == "ToLower")
             {

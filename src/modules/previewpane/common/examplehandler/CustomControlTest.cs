@@ -2,7 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.IO;
 using System.Windows.Forms;
 
@@ -25,7 +24,7 @@ namespace Common
                 WebBrowser browser = new WebBrowser();
 
                 browser.DocumentText = "Test";
-                browser.Navigate(new Uri(filePath));
+                browser.Navigate(filePath);
                 browser.Dock = DockStyle.Fill;
                 browser.IsWebBrowserContextMenuEnabled = false;
                 this.Controls.Add(browser);

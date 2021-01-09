@@ -216,7 +216,6 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     keyRemapTable.ColumnDefinitions().Append(newColumn);
     keyRemapTable.ColumnDefinitions().Append(removeColumn);
     keyRemapTable.RowDefinitions().Append(RowDefinition());
-    keyRemapTable.MinWidth(KeyboardManagerConstants::EditKeyboardTableMinWidth);
 
     // First header textblock in the header row of the keys remap table
     TextBlock originalKeyRemapHeader;
@@ -252,8 +251,9 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     keyboardManagerState.SetUIState(KeyboardManagerUIState::EditKeyboardWindowActivated, _hWndEditKeyboardWindow);
 
     // Load existing remaps into UI
-    SingleKeyRemapTable singleKeyRemapCopy = keyboardManagerState.singleKeyReMap;
-
+    std::unique_lock<std::mutex> lock(keyboardManagerState.singleKeyReMap_mutex);
+    std::unordered_map<DWORD, std::variant<DWORD, Shortcut>> singleKeyRemapCopy = keyboardManagerState.singleKeyReMap;
+    lock.unlock();
     LoadingAndSavingRemappingHelper::PreProcessRemapTable(singleKeyRemapCopy);
 
     for (const auto& it : singleKeyRemapCopy)
@@ -271,13 +271,9 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     header.SetLeftOf(applyButton, cancelButton);
 
     auto ApplyRemappings = [&keyboardManagerState, _hWndEditKeyboardWindow]() {
-        // Disable the remappings while the remapping table is updated
-        keyboardManagerState.RemappingsDisabledWrapper(
-            [&keyboardManagerState]() {
-                LoadingAndSavingRemappingHelper::ApplySingleKeyRemappings(keyboardManagerState, SingleKeyRemapControl::singleKeyRemapBuffer, true);
-                // Save the updated shortcuts remaps to file.
-                bool saveResult = keyboardManagerState.SaveConfigToFile();
-            });
+        LoadingAndSavingRemappingHelper::ApplySingleKeyRemappings(keyboardManagerState, SingleKeyRemapControl::singleKeyRemapBuffer, true);
+        // Save the updated shortcuts remaps to file.
+        bool saveResult = keyboardManagerState.SaveConfigToFile();
         PostMessage(_hWndEditKeyboardWindow, WM_CLOSE, 0, 0);
     };
 
@@ -290,10 +286,6 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     header.Children().Append(cancelButton);
 
     ScrollViewer scrollViewer;
-    scrollViewer.VerticalScrollMode(ScrollMode::Enabled);
-    scrollViewer.HorizontalScrollMode(ScrollMode::Enabled);
-    scrollViewer.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
-    scrollViewer.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
 
     // Add remap key button
     Windows::UI::Xaml::Controls::Button addRemapKey;
@@ -301,46 +293,29 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     plusSymbol.FontFamily(Media::FontFamily(L"Segoe MDL2 Assets"));
     plusSymbol.Glyph(L"\xE109");
     addRemapKey.Content(plusSymbol);
-    addRemapKey.Margin({ 10, 10, 0, 25 });
+    addRemapKey.Margin({ 10, 0, 0, 25 });
     addRemapKey.Click([&](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
         SingleKeyRemapControl::AddNewControlKeyRemapRow(keyRemapTable, keyboardRemapControlObjects);
         // Whenever a remap is added move to the bottom of the screen
         scrollViewer.ChangeView(nullptr, scrollViewer.ScrollableHeight(), nullptr);
     });
 
-    // Set accessible name for the addRemapKey button
-    addRemapKey.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_ADD_KEY_REMAP_BUTTON)));
-
-    // Add tooltip for add button which would appear on hover
-    ToolTip addRemapKeytoolTip;
-    addRemapKeytoolTip.Content(box_value(GET_RESOURCE_STRING(IDS_ADD_KEY_REMAP_BUTTON)));
-    ToolTipService::SetToolTip(addRemapKey, addRemapKeytoolTip);
-
-    // Header and example text at the top of the window
-    StackPanel helperText;
-    helperText.Children().Append(keyRemapInfoHeader);
-    helperText.Children().Append(keyRemapInfoExample);
-
-    // Remapping table
     StackPanel mappingsPanel;
+    mappingsPanel.Children().Append(keyRemapInfoHeader);
+    mappingsPanel.Children().Append(keyRemapInfoExample);
     mappingsPanel.Children().Append(keyRemapTable);
     mappingsPanel.Children().Append(addRemapKey);
 
-    // Remapping table should be scrollable
     scrollViewer.Content(mappingsPanel);
 
     // Creating the Xaml content. xamlContainer is the parent UI element
     RelativePanel xamlContainer;
-    xamlContainer.SetBelow(helperText, header);
-    xamlContainer.SetBelow(scrollViewer, helperText);
+    xamlContainer.SetBelow(scrollViewer, header);
     xamlContainer.SetAlignLeftWithPanel(header, true);
     xamlContainer.SetAlignRightWithPanel(header, true);
-    xamlContainer.SetAlignLeftWithPanel(helperText, true);
-    xamlContainer.SetAlignRightWithPanel(helperText, true);
     xamlContainer.SetAlignLeftWithPanel(scrollViewer, true);
     xamlContainer.SetAlignRightWithPanel(scrollViewer, true);
     xamlContainer.Children().Append(header);
-    xamlContainer.Children().Append(helperText);
     xamlContainer.Children().Append(scrollViewer);
     xamlContainer.UpdateLayout();
 
@@ -361,7 +336,6 @@ void createEditKeyboardWindow(HINSTANCE hInst, KeyboardManagerState& keyboardMan
     hwndLock.lock();
     hwndEditKeyboardNativeWindow = nullptr;
     keyboardManagerState.ResetUIState();
-    keyboardManagerState.ClearRegisteredKeyDelays();
 
     // Cannot be done in WM_DESTROY because that causes crashes due to fatal app exit
     xamlBridge.ClearXamlIslands();
@@ -375,22 +349,9 @@ LRESULT CALLBACK EditKeyboardWindowProc(HWND hWnd, UINT messageCode, WPARAM wPar
     // Resize the XAML window whenever the parent window is painted or resized
     case WM_PAINT:
     case WM_SIZE:
-    {
         GetClientRect(hWnd, &rcClient);
         SetWindowPos(hWndXamlIslandEditKeyboardWindow, 0, rcClient.left, rcClient.top, rcClient.right, rcClient.bottom, SWP_SHOWWINDOW);
-    }
-    break;
-    // To avoid UI elements overlapping on making the window smaller enforce a minimum window size
-    case WM_GETMINMAXINFO:
-    {
-        LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
-        int minWidth = KeyboardManagerConstants::MinimumEditKeyboardWindowWidth;
-        int minHeight = KeyboardManagerConstants::MinimumEditKeyboardWindowHeight;
-        DPIAware::Convert(nullptr, minWidth, minHeight);
-        lpMMI->ptMinTrackSize.x = minWidth;
-        lpMMI->ptMinTrackSize.y = minHeight;
-    }
-    break;
+        break;
     default:
         // If the Xaml Bridge object exists, then use it's message handler to handle keyboard focus operations
         if (xamlBridgePtr != nullptr)

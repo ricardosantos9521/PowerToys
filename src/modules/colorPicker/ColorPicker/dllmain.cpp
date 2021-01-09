@@ -6,7 +6,6 @@
 #include "Generated Files/resource.h"
 #include <common\settings_objects.h>
 #include <common\os-detect.h>
-#include <colorPicker\ColorPicker\ColorPickerConstants.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -39,9 +38,6 @@ private:
 
     std::wstring app_name;
 
-    //contains the non localized key of the powertoy
-    std::wstring app_key;
-
     HANDLE m_hProcess;
 
     // Time to wait for process to close after sending WM_CLOSE signal
@@ -51,7 +47,6 @@ public:
     ColorPicker()
     {
         app_name = GET_RESOURCE_STRING(IDS_COLORPICKER_NAME);
-        app_key = ColorPickerConstants::ModuleKey;
     }
 
     ~ColorPicker()
@@ -68,16 +63,10 @@ public:
         delete this;
     }
 
-    // Return the localized display name of the powertoy
+    // Return the display name of the powertoy, this will be cached by the runner
     virtual const wchar_t* get_name() override
     {
         return app_name.c_str();
-    }
-
-    // Return the non localized key of the powertoy, this will be cached by the runner
-    virtual const wchar_t* get_key() override
-    {
-        return app_key.c_str();
     }
 
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
@@ -103,7 +92,7 @@ public:
         {
             // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+                PowerToysSettings::PowerToyValues::from_json_string(config);
 
             // If you don't need to do any custom processing of the settings, proceed
             // to persists the values calling:

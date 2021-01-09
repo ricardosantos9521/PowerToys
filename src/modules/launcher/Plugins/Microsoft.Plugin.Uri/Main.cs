@@ -7,11 +7,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using ManagedCommon;
 using Microsoft.Plugin.Uri.UriHelper;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace Microsoft.Plugin.Uri
 {
@@ -57,7 +56,7 @@ namespace Microsoft.Plugin.Uri
                 results.Add(new Result
                 {
                     Title = uriResultString,
-                    SubTitle = Properties.Resources.Microsoft_plugin_uri_website,
+                    SubTitle = Context.API.GetTranslation("Microsoft_plugin_uri_website"),
                     IcoPath = _uriSettings.ShowBrowserIcon
                         ? BrowserIconPath
                         : DefaultIconPath,
@@ -85,12 +84,12 @@ namespace Microsoft.Plugin.Uri
 
         public string GetTranslatedPluginTitle()
         {
-            return Properties.Resources.Microsoft_plugin_uri_plugin_name;
+            return "Url Handler";
         }
 
         public string GetTranslatedPluginDescription()
         {
-            return Properties.Resources.Microsoft_plugin_uri_plugin_description;
+            return "Handles urls";
         }
 
         public void Save()
@@ -146,7 +145,7 @@ namespace Microsoft.Plugin.Uri
             catch (Exception e)
             {
                 BrowserIconPath = DefaultIconPath;
-                Log.Exception("Exception when retreiving icon", e, GetType());
+                Log.Exception("Exception when retreiving icon", e);
             }
         }
 

@@ -10,7 +10,6 @@ using System.Runtime.Loader;
 using Wox.Infrastructure;
 using Wox.Infrastructure.UserSettings;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace Wox.Core.Plugin
 {
@@ -18,17 +17,18 @@ namespace Wox.Core.Plugin
     {
         public const string PATH = "PATH";
 
-        public static List<PluginPair> Plugins(List<PluginMetadata> metadatas)
+        public static List<PluginPair> Plugins(List<PluginMetadata> metadatas, PluginSettings settings)
         {
             var csharpPlugins = CSharpPlugins(metadatas).ToList();
-            return csharpPlugins;
+            var executablePlugins = ExecutablePlugins(metadatas);
+            var plugins = csharpPlugins.Concat(executablePlugins).ToList();
+            return plugins;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "All exception information is being logged")]
         public static IEnumerable<PluginPair> CSharpPlugins(List<PluginMetadata> source)
         {
             var plugins = new List<PluginPair>();
-            var metadatas = source.Where(o => o.Language.ToUpperInvariant() == AllowedLanguage.CSharp);
+            var metadatas = source.Where(o => o.Language.ToUpper() == AllowedLanguage.CSharp);
 
             foreach (var metadata in metadatas)
             {
@@ -47,7 +47,7 @@ namespace Wox.Core.Plugin
                     }
                     catch (Exception e)
                     {
-                        Log.Exception($"Couldn't load assembly for {metadata.Name}", e, MethodBase.GetCurrentMethod().DeclaringType);
+                        Infrastructure.Logger.Log.Exception($"|PluginsLoader.CSharpPlugins|Couldn't load assembly for {metadata.Name}", e);
                         return;
                     }
 
@@ -59,7 +59,7 @@ namespace Wox.Core.Plugin
                     }
                     catch (InvalidOperationException e)
                     {
-                        Log.Exception($"Can't find class implement IPlugin for <{metadata.Name}>", e, MethodBase.GetCurrentMethod().DeclaringType);
+                        Infrastructure.Logger.Log.Exception($"|PluginsLoader.CSharpPlugins|Can't find class implement IPlugin for <{metadata.Name}>", e);
                         return;
                     }
 
@@ -70,7 +70,7 @@ namespace Wox.Core.Plugin
                     }
                     catch (Exception e)
                     {
-                        Log.Exception($"Can't create instance for <{metadata.Name}>", e, MethodBase.GetCurrentMethod().DeclaringType);
+                        Infrastructure.Logger.Log.Exception($"|PluginsLoader.CSharpPlugins|Can't create instance for <{metadata.Name}>", e);
                         return;
                     }
 #endif
@@ -84,6 +84,18 @@ namespace Wox.Core.Plugin
                 metadata.InitTime += milliseconds;
             }
 
+            return plugins;
+        }
+
+        public static IEnumerable<PluginPair> ExecutablePlugins(IEnumerable<PluginMetadata> source)
+        {
+            var metadatas = source.Where(o => o.Language.ToUpper() == AllowedLanguage.Executable);
+
+            var plugins = metadatas.Select(metadata => new PluginPair
+            {
+                Plugin = new ExecutablePlugin(metadata.ExecuteFilePath),
+                Metadata = metadata,
+            });
             return plugins;
         }
     }

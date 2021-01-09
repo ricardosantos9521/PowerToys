@@ -53,14 +53,8 @@ namespace KeyboardManagerConstants
     // Default window sizes
     inline const int DefaultEditKeyboardWindowWidth = 800;
     inline const int DefaultEditKeyboardWindowHeight = 600;
-    inline const int MinimumEditKeyboardWindowWidth = 500;
-    inline const int MinimumEditKeyboardWindowHeight = 450;
-    inline const int EditKeyboardTableMinWidth = 700;
     inline const int DefaultEditShortcutsWindowWidth = 1050;
     inline const int DefaultEditShortcutsWindowHeight = 600;
-    inline const int MinimumEditShortcutsWindowWidth = 500;
-    inline const int MinimumEditShortcutsWindowHeight = 500;
-    inline const int EditShortcutsTableMinWidth = 1000;
 
     // Key Remap table constants
     inline const long RemapTableColCount = 4;
@@ -99,9 +93,6 @@ namespace KeyboardManagerConstants
 
     // Dummy key event used in between key up and down events to prevent certain global events from happening
     inline const DWORD DUMMY_KEY = 0xFF;
-
-    // Number of key messages required while sending a dummy key event
-    inline const size_t DUMMY_KEY_EVENT_SIZE = 2;
 
     // String constant for the default app name in Remap shortcuts
     inline const std::wstring DefaultAppName = GET_RESOURCE_STRING(IDS_EDITSHORTCUTS_ALLAPPS);

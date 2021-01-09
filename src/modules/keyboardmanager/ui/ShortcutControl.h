@@ -12,7 +12,6 @@ namespace winrt::Windows::UI::Xaml
         struct StackPanel;
         struct Grid;
         struct TextBox;
-        struct Button;
     }
 }
 
@@ -28,12 +27,6 @@ private:
     // StackPanel to parent the above controls
     winrt::Windows::Foundation::IInspectable shortcutControlLayout;
 
-    // Function to set the accessible name of the target app text box
-    static void SetAccessibleNameForTextBox(TextBox targetAppTextBox, int rowIndex);
-
-    // Function to set the accessible names for all the controls in a row
-    static void UpdateAccessibleNames(StackPanel sourceColumn, StackPanel mappedToColumn, TextBox targetAppTextBox, Button deleteButton, int rowIndex);
-
 public:
     // Handle to the current Edit Shortcuts Window
     static HWND EditShortcutsWindowHandle;
@@ -48,7 +41,7 @@ public:
     ShortcutControl(Grid table, const int colIndex, TextBox targetApp);
 
     // Function to add a new row to the shortcut table. If the originalKeys and newKeys args are provided, then the displayed shortcuts are set to those values.
-    static void AddNewShortcutControlRow(Grid& parent, std::vector<std::vector<std::unique_ptr<ShortcutControl>>>& keyboardRemapControlObjects, const Shortcut& originalKeys = Shortcut(), const KeyShortcutUnion& newKeys = Shortcut(), const std::wstring& targetAppName = L"");
+    static void AddNewShortcutControlRow(Grid& parent, std::vector<std::vector<std::unique_ptr<ShortcutControl>>>& keyboardRemapControlObjects, const Shortcut& originalKeys = Shortcut(), const std::variant<DWORD, Shortcut>& newKeys = Shortcut(), const std::wstring& targetAppName = L"");
 
     // Function to return the stack panel element of the ShortcutControl. This is the externally visible UI element which can be used to add it to other layouts
     StackPanel getShortcutControl();

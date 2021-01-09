@@ -25,7 +25,7 @@ namespace Wox.Test
             rvm.SelectedItem = selectedItem;
 
             // Assert
-            Assert.AreEqual(ResultViewModel.NoSelectionIndex, selectedItem.ContextMenuSelectedIndex);
+            Assert.AreEqual(selectedItem.ContextMenuSelectedIndex, ResultViewModel.NoSelectionIndex);
         }
 
         [Test]
@@ -45,7 +45,7 @@ namespace Wox.Test
             rvm.SelectNextContextMenuItem();
 
             // Assert
-            Assert.AreEqual(0, selectedItem.ContextMenuSelectedIndex);
+            Assert.AreEqual(selectedItem.ContextMenuSelectedIndex, 0);
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace Wox.Test
             rvm.SelectNextContextMenuItem();
 
             // Assert
-            Assert.AreEqual(0, selectedItem.ContextMenuSelectedIndex);
+            Assert.AreEqual(selectedItem.ContextMenuSelectedIndex, 0);
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace Wox.Test
             rvm.SelectPreviousContextMenuItem();
 
             // Assert
-            Assert.AreEqual(1, selectedItem.ContextMenuSelectedIndex);
+            Assert.AreEqual(selectedItem.ContextMenuSelectedIndex, 1);
         }
 
         [Test]
@@ -117,7 +117,7 @@ namespace Wox.Test
             rvm.SelectPreviousContextMenuItem();
 
             // Assert
-            Assert.AreEqual(ResultViewModel.NoSelectionIndex, selectedItem.ContextMenuSelectedIndex);
+            Assert.AreEqual(selectedItem.ContextMenuSelectedIndex, ResultViewModel.NoSelectionIndex);
         }
 
         [Test]

@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Microsoft.Win32;
-using Wox.Plugin;
 
 namespace Wox.Infrastructure.Exception
 {

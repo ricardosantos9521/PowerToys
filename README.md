@@ -4,9 +4,7 @@
 
 Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity. Inspired by the [Windows 95 era PowerToys project](https://en.wikipedia.org/wiki/Microsoft_PowerToys), this reboot provides power users with ways to squeeze more efficiency out of the Windows 10 shell and customize it for individual workflows.  A great overview of the Windows 95 PowerToys can be found [here](https://socket3.wordpress.com/2016/10/22/using-windows-95-powertoys/).
 
-For a video overview of PowerToys, including install steps and a walkthrough of the available utilities, check out the [PowerToys: Utilities to customize Windows 10](https://www.youtube.com/watch?v=F-d7KiwpnMA) episode of Tabs vs Spaces on YouTube.
-
-[Downloading & Release notes][github-release-link]   |   [What's Happening](#whats-happening)   |   [Contributing to PowerToys](#contributing)   |   [Known issues](#known-issues)
+[What's Happening](#whats-happening)   |   [Downloading & Release notes][github-release-link]   |   [Contributing to PowerToys](#contributing) | [Known issues](#known-issues)
 
 ## Build status
 
@@ -20,14 +18,15 @@ For a video overview of PowerToys, including install steps and a walkthrough of 
 
 ### Color Picker
 
-[<img align="left" src="https://aka.ms/powerToysColorPickerImageSmall" />](https://aka.ms/PowerToysOverview_ColorPicker) [ColorPicker](https://aka.ms/PowerToysOverview_ColorPicker) is a simple and quick system-wide color picker with <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>. Color Picker allows to pick colors from any currently running application and automatically copies the HEX or RGB values to your clipboard. This code is based on [Martin Chrzan's Color Picker](https://github.com/martinchrzan/ColorPicker).
+[<img align="left" src="./doc/images/overview/ColorPicker_small.png" />](https://aka.ms/PowerToysOverview_ColorPicker) [ColorPicker](https://aka.ms/PowerToysOverview_ColorPicker) is a simple and quick system-wide color picker with <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>. Color Picker allows to pick colors from any currently running application and automatically copies the HEX or RGB values to your clipboard. This code is based on [Martin Chrzan's Color Picker](https://github.com/martinchrzan/ColorPicker).
+<br/>
 <br/>
 <br/>
 <br/>
 
 ### FancyZones
 
-[<img align="left" src="https://aka.ms/powerToysFancyZoneImageSmall" />](https://aka.ms/PowerToysOverview_FancyZones) [FancyZones](https://aka.ms/PowerToysOverview_FancyZones) is a window manager that makes it easy to create complex window layouts and quickly position windows into those layouts.
+[<img align="left" src="./doc/images/overview/FancyZones_small.png" />](https://aka.ms/PowerToysOverview_FancyZones) [FancyZones](https://aka.ms/PowerToysOverview_FancyZones) is a window manager that makes it easy to create complex window layouts and quickly position windows into those layouts.
 <br/>
 <br/>
 <br/>
@@ -36,7 +35,7 @@ For a video overview of PowerToys, including install steps and a walkthrough of 
 
 ### File Explorer Add-ons
 
-[<img align="left" src="https://aka.ms/powerToysPowerPreviewImageSmall" />](https://aka.ms/PowerToysOverview_FileExplorerAddOns) [File Explorer](https://aka.ms/PowerToysOverview_FileExplorerAddOns) add-ons will enable SVG icon rendering and Preview Pane additions for File Explorer. 
+[<img align="left" src="./doc/images/overview/PowerPreview_small.png" />](https://aka.ms/PowerToysOverview_FileExplorerAddOns) [File Explorer](https://aka.ms/PowerToysOverview_FileExplorerAddOns) add-ons will enable SVG icon rendering and Preview Pane additions for File Explorer. 
 
 Preview Pane is an existing feature in the File Explorer.  To enable it, you just click the View tab in the ribbon and then click "Preview Pane". PowerToys will now enable two types of files to be previewed: Markdown (.md) & SVG (.svg)
 <br/>
@@ -44,7 +43,7 @@ Preview Pane is an existing feature in the File Explorer.  To enable it, you jus
 
 ### Image Resizer
 
-[<img align="left" src="https://aka.ms/powerToysImageResizerImageSmall" />](https://aka.ms/PowerToysOverview_ImageResizer) [Image Resizer](https://aka.ms/PowerToysOverview_ImageResizer) is a Windows Shell Extension for quickly resizing images.  With a simple right click from File Explorer, resize one or many images instantly. This code is based on [Brice Lambson's Image Resizer](https://github.com/bricelam/ImageResizer).
+[<img align="left" src="./doc/images/overview/ImageResizer_small.png" />](https://aka.ms/PowerToysOverview_ImageResizer) [Image Resizer](https://aka.ms/PowerToysOverview_ImageResizer) is a Windows Shell Extension for quickly resizing images.  With a simple right click from File Explorer, resize one or many images instantly. This code is based on [Brice Lambson's Image Resizer](https://github.com/bricelam/ImageResizer).
 <br/>
 <br/>
 <br/>
@@ -52,7 +51,7 @@ Preview Pane is an existing feature in the File Explorer.  To enable it, you jus
 
 ### Keyboard Manager
 
-[<img align="left" src="https://aka.ms/powerToysKBMImageSmall" />](https://aka.ms/PowerToysOverview_KeyboardManager) [Keyboard Manager](https://aka.ms/PowerToysOverview_KeyboardManager) allows you to customize the keyboard to be more productive by remapping keys and creating your own keyboard shortcuts. This PowerToy requires Windows 10 1903 (build 18362) or later.
+[<img align="left" src="./doc/images/overview/KBM_small.png" />](https://aka.ms/PowerToysOverview_KeyboardManager) [Keyboard Manager](https://aka.ms/PowerToysOverview_KeyboardManager) allows you to customize the keyboard to be more productive by remapping keys and creating your own keyboard shortcuts. This PowerToy requires Windows 10 1903 (build 18362) or later.
 <br/>
 <br/>
 <br/>
@@ -60,29 +59,22 @@ Preview Pane is an existing feature in the File Explorer.  To enable it, you jus
 
 ### PowerRename
 
-[<img align="left" src="https://aka.ms/powerToysPowerRenameImageSmall" />](https://aka.ms/PowerToysOverview_PowerRename) [PowerRename](https://aka.ms/PowerToysOverview_PowerRename) is a Windows Shell Extension for advanced bulk renaming using search and replace or regular expressions. PowerRename allows simple search and replace or more advanced regular expression matching. While you type in the search and replace input fields, the preview area will show what the items will be renamed to. PowerRename then calls into the Windows Explorer file operations engine to perform the rename. This has the benefit of allowing the rename operation to be undone after PowerRename exits. This code is based on [Chris Davis's SmartRename](https://github.com/chrdavis/SmartRename).
+[<img align="left" src="./doc/images/overview/PowerRename_small.png" />](https://aka.ms/PowerToysOverview_PowerRename) [PowerRename](https://aka.ms/PowerToysOverview_PowerRename) is a Windows Shell Extension for advanced bulk renaming using search and replace or regular expressions. PowerRename allows simple search and replace or more advanced regular expression matching. While you type in the search and replace input fields, the preview area will show what the items will be renamed to. PowerRename then calls into the Windows Explorer file operations engine to perform the rename. This has the benefit of allowing the rename operation to be undone after PowerRename exits. This code is based on [Chris Davis's SmartRename](https://github.com/chrdavis/SmartRename).
 <br/>
 
 ### PowerToys Run
 
-[<img align="left" src="https://aka.ms/powerToysPowerLauncherImageSmall" />](https://aka.ms/PowerToysOverview_PowerToysRun) [PowerToys Run](https://aka.ms/PowerToysOverview_PowerToysRun) is a new toy in PowerToys that can help you search and launch your app instantly with a simple <kbd>Alt</kbd>+<kbd>Space</kbd> and start typing! It is open source and modular for additional plugins.  Window Walker is now inside too! This PowerToy requires Windows 10 1903 (build 18362) or later.
+[<img align="left" src="./doc/images/overview/PowerLauncher_small.png" />](https://aka.ms/PowerToysOverview_PowerToysRun) [PowerToys Run](https://aka.ms/PowerToysOverview_PowerToysRun) is a new toy in PowerToys that can help you search and launch your app instantly with a simple <kbd>Alt</kbd>+<kbd>Space</kbd> and start typing! It is open source and modular for additional plugins.  Window Walker is now inside too! This PowerToy requires Windows 10 1903 (build 18362) or later.
+<br/>
 <br/>
 <br/>
 <br/>
 
 ### Shortcut Guide
 
-[<img align="left" src="https://aka.ms/powerToysShortcutGuideImageSmall" />](https://aka.ms/PowerToysOverview_ShortcutGuide)  [Windows key shortcut guide](https://aka.ms/PowerToysOverview_ShortcutGuide) appears when a user holds the Windows key down for more than one second and shows the available shortcuts for the current state of the desktop.
+[<img align="left" src="./doc/images/overview/ShortcutGuide_small.png" />](https://aka.ms/PowerToysOverview_ShortcutGuide)  [Windows key shortcut guide](https://aka.ms/PowerToysOverview_ShortcutGuide) appears when a user holds the Windows key down for more than one second and shows the available shortcuts for the current state of the desktop.
 <br/>
 <br/>
-<br/>
-<br/>
-
-### Video Conference Mute (Experimental)
-
-[<img align="left" src="https://aka.ms/powerToysVideoConferenceImageSmall" />](https://aka.ms/PowerToysOverview_VideoConference)  [Video Conference Mute](https://aka.ms/PowerToysOverview_VideoConference) is a quick and easy way to do a global "mute" of both your microphone and webcam via <kbd>Win</kbd>+<kbd>N</kbd>. Just set your webcam in the target application to the PowerToys VideoConference camera.
-
-**Note:** This is only included in the [pre-release experimental version of PowerToys installer][github-prerelease-link]. This PowerToy requires Windows 10 1903 (build 18362) or later.
 <br/>
 <br/>
 <br/>
@@ -95,11 +87,11 @@ Preview Pane is an existing feature in the File Explorer.  To enable it, you jus
 
 #### 0.18 users for updating via notifications
 
-- We adjusted how upgrading works in 0.20.  In 0.19 we accounted for this upcoming change but if you are going from 0.18 to 0.21, please directly use the installer file.
+- We adjusted how upgrading works in 0.20.  In 0.19 we accounted for this upcoming change but if you are going from 0.18 to 0.20, please directly use the installer file.
 
 ### Via GitHub with EXE [Recommended]
 
-Install from the [Microsoft PowerToys GitHub releases page][github-release-link]. Click on `Assets` to show the files available in the release and then click on `PowerToysSetup-0.23.2-x64.exe` to download the PowerToys installer.
+Install from the [Microsoft PowerToys GitHub releases page][github-release-link]. Click on `Assets` to show the files available in the release and then click on `PowerToysSetup-0.20.1-x64.exe` to download the PowerToys installer.
 
 This is our preferred method.
 
@@ -110,13 +102,9 @@ Download PowerToys from [WinGet](https://github.com/microsoft/winget-cli/release
 WinGet install powertoys
 ```
 
-### Experiential PowerToys utility with Video conference muting
-
-Install the [pre-release experimental version of PowerToys][github-prerelease-link] to try out this version. It includes all improvements from 0.23 in addition to the Video conference utility. Click on `Assets` to show the files available in the release and then download the .exe installer.
-
 ### Other install methods
 
-There are [community driven install methods](./doc/unofficalInstallMethods.md) such as Chocolatey and Scoop.  If these are your preferred install solutions, this will have the install instructions.
+There are [community driven install methods](./doc/unofficalInstallMethods.md) such as Chocolatey and Scoop.  If these are your perferred install solutions, this will have the install instructions.
 
 ### Known issues
 
@@ -132,86 +120,39 @@ We currently support the matrix below.
 
 ## What's Happening
 
-### September 2020 Update
+### July 2020 Update
 
-Our goals for 0.23 release cycle was to focus on stability, accessibility, localization and quality of life improvements for both the development team and our end users. We have a full accessibility pass being done starting end of September to audit all of PowerToys. Our localization efforts now had data flowing both directions as well.
+Our goals for 0.20 release cycle were to focus on adding in a few new features along with a heavy focus on stability / quality fixes. Martin Chrzan helped contribute a new utility that was in our 2021 plans, a screen wide color picker!  Chris Davis also helped contribute a SVG icon support for File Explorer!
 
-Our [prioritized roadmap][roadmap] of features and utilities that the core team is focusing on.
+Between 0.19 and 0.20 releases, we tracked down a lot of performance and memory issues with PowerToys Run as well. The most important ones got added to 0.19.1 and 0.19.2 releases. If you find something not working correctly, please make us aware.
 
-#### Highlights from September
+In addition, we'd like to thank everyone who filed a bug, gave feedback or made a pull-request. The PowerToys team is extremely grateful to have the support of an amazing active community.
 
-- We shipped [v0.23][github-release-link]! (0.24 Experimental build coming shortly)
+Here are a few highlights from July
 
-**General**
+- We shipped [v0.20][github-release-link]!
+- [Martin Chrzan's Color Picker](https://github.com/martinchrzan/) was added in!  With a quick <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, get the color from your screen
+- File Explorer - Can now render SVG icons thanks to Chris Davis
+- FancyZones - you can now snap to any number of zones in FancyZones holding <kbd>Shift</kbd>+<kbd>Ctrl</kbd> while dragging a window
+- PT Run - keyboard interaction improvements
+- PT Run - freshly installed apps are now being detected
+- PT Run - Lots of perf and bug fixes
+- Keyboard manager - app level shortcuts 
+   - Example: For Outlook, Remap <kbd>Ctrl</kbd>+<kbd>F</kbd> to <kbd>F4</kbd> and now <kbd>Ctrl</kbd>+<kbd>F</kbd> will put up the find window :)
+- Keyboard manager - Now can remap key to shortcut and shortcut to key.
+- Settings - Now has improved OOBE based on the work the Microsoft Garage Interns did during their hackathon
+- PowerRename improvements
 
-- Localization pipeline is flowing from our Github to the loc system and back.  0.25 should be localized now.
-- The EXE installer should be at parity now with the MSI.  Please go to the wiki for [installer args](https://github.com/microsoft/PowerToys/wiki/Installer-arguments-for-exe)
-
-**FancyZones**
-
-- Fixed bug on not seeing a newly attached screen
-- Fixed spanning across monitors bug
-- Added in default layout for new users, a Priority Grid
-- Added keyboard support to grow / shrink to multiple zones
-- General bug fixes
-
-**PT Run**
-
-- Multiple crash bugs fixed.  Prioritized any users reported along with top hits from Watson reporting
-- Stopped PT Run from interfering with an install
-- Fixed folder bug if it had a # in it (Thanks @jjw24 for the PR!)
-- Fixed a screen flicker for 
-- General bug fixes
-- Allow Command Line args in PowerToys Run (Thanks @@royvou)
-
-**Keyboard manager**
-
-- Multiple crash bugs fixed.  Prioritized any users reported along with top hits from Watson reporting
-- Fixed multiple accessibility issues.
-- General bug fixes
-
-**Preview Pane**
-
-- Added in Frontmatter and better (but still basic) latex support. 
-
-**Settings**
-
-- Fixed scaling issue for responsive design on Image Resizer
-- Fixed crash on empty color value.
-- Fixed crash for toggling FancyZones on/off
-- Fixed 0x00 NFTS crash for settings
-- Fixed multiple accessibility issues.
-- Layout adjustments (Thanks @niels9001)
-- General bug fixes
-
-**Dev related**
-
-- FxCop is being rolled out across all PowerToys. This should catch a lot of possible leaks.
-- Unified PT Run's log system
-- PT Run's calc plugin now has unit tests (Thanks @P-Storm)
-- Dev setup install script now supports VS preview (Thanks @TobiasSekan)
-- @CaelestisZ, @kameshkotwani, @adriancampos, @RahulDas782 for doc tweaks
-- Thanks @Aaron-Junker, @jay-o-way and @htcfreek for helping triage!
-- Thanks for everyone that filled an issue.  It really does help us prioritize
-
-#### Video / GIF capture functional spec for public review
-
-Deondre Davis created our [functional spec for creating a light weight, video / GIF recording tool](https://github.com/microsoft/PowerToys/pull/6900). We encourage everyone to review it and please leave comments in the pull request so we can adjust as needed. We'll be closing it for feedback on October 12th, 2020.
-
-This is for work [post-stabilization of current roadmap work](https://github.com/microsoft/PowerToys/wiki/Roadmap#post-stabilization) and is only the spec for what we are thinking about support.  Just want to set expectations here.
-
-### What is being planned for 0.25
-
-For [0.25](https://github.com/microsoft/PowerToys/issues?q=is%3Aopen+is%3Aissue+project%3Amicrosoft%2FPowerToys%2F13), we are proactively working on:
+For [0.21](https://github.com/microsoft/PowerToys/issues?q=is%3Aopen+is%3Aissue+project%3Amicrosoft%2FPowerToys%2F8), we are proactively working on:
 
 - Stability
+- Quality
 - Localization
-- Improve interactions with elevated windows and keeping most of the PT utilities non-elevated so we still have a 'shell' like experience
-- OOBE work
+- FancyZones improvements
 
-### PowerToys roadmap
+### PowerToys 2020 roadmap
 
-Our [prioritized roadmap][roadmap] of features and utilities that the core team is focusing on.
+Our roadmap for all the [goals and utilities for 2020 detailed over here in the wiki][v1].
 
 ## Developer Guidance
 
@@ -221,7 +162,7 @@ Please read the [developer docs](/doc/devdocs) for a detailed breakdown.
 
 This project welcomes contributions of all types. Help spec'ing, design, documentation, finding bugs are ways everyone can help on top of coding features / bug fixes. We are excited to work with the power user community to build a set of tools for helping you get the most out of Windows.
 
-We ask that **before you start work on a feature that you would like to contribute**, please read our [Contributor's Guide](CONTRIBUTING.md). We will be happy to work with you to figure out the best approach, provide guidance and mentorship throughout feature development, and help avoid any wasted or duplicate effort.
+We ask that **before you start work on a feature that you would like to contribute**, please read our [Contributor's Guide](contributing.md). We will be happy to work with you to figure out the best approach, provide guidance and mentorship throughout feature development, and help avoid any wasted or duplicate effort.
 
 ### ⚠ State of code ⚠
 
@@ -242,7 +183,5 @@ The application logs basic telemetry. Our Telemetry Data page (Coming Soon) has 
 [oss-CLA]: https://cla.opensource.microsoft.com
 [oss-conduct-code]: CODE_OF_CONDUCT.md
 [github-release-link]: https://github.com/microsoft/PowerToys/releases/
-[github-prerelease-link]: https://github.com/microsoft/PowerToys/releases/tag/v0.24.0-Experimental
-[roadmap]: https://github.com/microsoft/PowerToys/wiki/Roadmap
+[v1]: https://github.com/microsoft/PowerToys/wiki/Version-1.0-Strategy
 [privacyLink]: http://go.microsoft.com/fwlink/?LinkId=521839
-[vidConfOverview]: https://aka.ms/PowerToysOverview_VideoConference

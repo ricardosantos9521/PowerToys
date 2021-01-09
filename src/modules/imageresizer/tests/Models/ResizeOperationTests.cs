@@ -16,10 +16,9 @@ namespace ImageResizer.Models
     public class ResizeOperationTests : IDisposable
     {
         private readonly TestDirectory _directory = new TestDirectory();
-        private bool disposedValue;
 
         [Fact]
-        public void ExecuteCopiesFrameMetadata()
+        public void Execute_copies_frame_metadata()
         {
             var operation = new ResizeOperation("Test.jpg", _directory, Settings());
 
@@ -31,19 +30,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteCopiesFrameMetadataExceptWhenMetadataCannotBeCloned()
-        {
-            var operation = new ResizeOperation("TestMetadataIssue2447.jpg", _directory, Settings());
-
-            operation.Execute();
-
-            AssertEx.Image(
-                _directory.File(),
-                image => Assert.Null(((BitmapMetadata)image.Frames[0].Metadata).CameraModel));
-        }
-
-        [Fact]
-        public void ExecuteKeepsDateModified()
+        public void Execute_keeps_date_modified()
         {
             var operation = new ResizeOperation("Test.png", _directory, Settings(s => s.KeepDateModified = true));
 
@@ -53,7 +40,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteKeepsDateModifiedWhenReplacingOriginals()
+        public void Execute_keeps_date_modified_when_replacing_originals()
         {
             var path = Path.Combine(_directory, "Test.png");
             File.Copy("Test.png", path);
@@ -76,7 +63,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteReplacesOriginals()
+        public void Execute_replaces_originals()
         {
             var path = Path.Combine(_directory, "Test.png");
             File.Copy("Test.png", path);
@@ -89,7 +76,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteTransformsEachFrame()
+        public void Execute_transforms_each_frame()
         {
             var operation = new ResizeOperation("Test.gif", _directory, Settings());
 
@@ -105,7 +92,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteUsesFallbackEncoder()
+        public void Execute_uses_fallback_encoder()
         {
             var operation = new ResizeOperation(
                 "Test.ico",
@@ -118,7 +105,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformIgnoresOrientationWhenLandscapeToPortrait()
+        public void Transform_ignores_orientation_when_landscape_to_portrait()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -143,7 +130,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformIgnoresOrientationWhenPortraitToLandscape()
+        public void Transform_ignores_orientation_when_portrait_to_landscape()
         {
             var operation = new ResizeOperation(
                 "TestPortrait.png",
@@ -168,7 +155,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformIgnoresIgnoreOrientationWhenAuto()
+        public void Transform_ignores_ignore_orientation_when_auto()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -193,7 +180,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformIgnoresIgnoreOrientationWhenPercent()
+        public void Transform_ignores_ignore_orientation_when_percent()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -220,7 +207,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsShrinkOnly()
+        public void Transform_honors_shrink_only()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -245,7 +232,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformIgnoresShrinkOnlyWhenPercent()
+        public void Transform_ignores_shrink_only_when_percent()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -270,7 +257,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsShrinkOnlyWhenAutoHeight()
+        public void Transform_honors_shrink_only_when_auto_height()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -291,7 +278,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsShrinkOnlyWhenAutoWidth()
+        public void Transform_honors_shrink_only_when_auto_width()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -312,7 +299,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsUnit()
+        public void Transform_honors_unit()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -331,7 +318,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsFitWhenFit()
+        public void Transform_honors_fit_when_Fit()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -350,7 +337,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsFitWhenFill()
+        public void Transform_honors_fit_when_Fill()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -370,7 +357,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void TransformHonorsFitWhenStretch()
+        public void Transform_honors_fit_when_Stretch()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -390,9 +377,9 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetDestinationPathUniquifiesOutputFilename()
+        public void GetDestinationPath_uniquifies_output_filename()
         {
-            File.WriteAllBytes(Path.Combine(_directory, "Test (Test).png"), Array.Empty<byte>());
+            File.WriteAllBytes(Path.Combine(_directory, "Test (Test).png"), new byte[0]);
 
             var operation = new ResizeOperation("Test.png", _directory, Settings());
 
@@ -402,10 +389,10 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetDestinationPathUniquifiesOutputFilenameAgain()
+        public void GetDestinationPath_uniquifies_output_filename_again()
         {
-            File.WriteAllBytes(Path.Combine(_directory, "Test (Test).png"), Array.Empty<byte>());
-            File.WriteAllBytes(Path.Combine(_directory, "Test (Test) (1).png"), Array.Empty<byte>());
+            File.WriteAllBytes(Path.Combine(_directory, "Test (Test).png"), new byte[0]);
+            File.WriteAllBytes(Path.Combine(_directory, "Test (Test) (1).png"), new byte[0]);
 
             var operation = new ResizeOperation("Test.png", _directory, Settings());
 
@@ -415,7 +402,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetDestinationPathUsesFileNameFormat()
+        public void GetDestinationPath_uses_fileName_format()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -428,7 +415,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ExecuteHandlesDirectoriesInFileNameFormat()
+        public void Execute_handles_directories_in_fileName_format()
         {
             var operation = new ResizeOperation(
                 "Test.png",
@@ -440,46 +427,27 @@ namespace ImageResizer.Models
             Assert.True(File.Exists(_directory + @"\Directory\Test (Test).png"));
         }
 
-        private static Settings Settings(Action<Settings> action = null)
+        public void Dispose()
+            => _directory.Dispose();
+
+        private Settings Settings(Action<Settings> action = null)
         {
-            var settings = new Settings()
+            var settings = new Settings
             {
+                Sizes = new ObservableCollection<ResizeSize>
+                {
+                    new ResizeSize
+                    {
+                        Name = "Test",
+                        Width = 96,
+                        Height = 96,
+                    },
+                },
                 SelectedSizeIndex = 0,
             };
-            settings.Sizes.Clear();
-
-            settings.Sizes.Add(new ResizeSize
-            {
-                Name = "Test",
-                Width = 96,
-                Height = 96,
-            });
-
             action?.Invoke(settings);
 
             return settings;
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    _directory.Dispose();
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
     }
 }

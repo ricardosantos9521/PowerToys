@@ -6,8 +6,6 @@
 #include <common/common.h>
 #include <common/settings_objects.h>
 #include <common/debug_control.h>
-#include <sstream>
-#include <modules\shortcut_guide\ShortcutGuideConstants.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -86,8 +84,8 @@ namespace
         // For now, since ShortcutGuide can only disable entire "Windows Controls"
         // group, we require that the window supports all the options.
         result.snappable = ((style & WS_MAXIMIZEBOX) == WS_MAXIMIZEBOX) &&
-                           ((style & WS_MINIMIZEBOX) == WS_MINIMIZEBOX) &&
-                           ((style & WS_THICKFRAME) == WS_THICKFRAME);
+                            ((style & WS_MINIMIZEBOX) == WS_MINIMIZEBOX) &&
+                            ((style & WS_THICKFRAME) == WS_THICKFRAME);
         return result;
     }
 }
@@ -95,20 +93,12 @@ namespace
 OverlayWindow::OverlayWindow()
 {
     app_name = GET_RESOURCE_STRING(IDS_SHORTCUT_GUIDE);
-    app_key = ShortcutGuideConstants::ModuleKey;
     init_settings();
 }
 
-// Return the localized display name of the powertoy
 const wchar_t* OverlayWindow::get_name()
 {
     return app_name.c_str();
-}
-
-// Return the non localized key of the powertoy, this will be cached by the runner
-const wchar_t* OverlayWindow::get_key()
-{
-    return app_key.c_str();
 }
 
 bool OverlayWindow::get_config(wchar_t* buffer, int* buffer_size)
@@ -151,7 +141,7 @@ void OverlayWindow::set_config(const wchar_t* config)
     {
         // save configuration
         PowerToysSettings::PowerToyValues _values =
-            PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            PowerToysSettings::PowerToyValues::from_json_string(config);
         _values.save_to_settings_file();
         Trace::SettingsChanged(pressTime.value, overlayOpacity.value, theme.value);
 
@@ -234,10 +224,7 @@ void OverlayWindow::enable()
             hook_handle = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), NULL);
             if (!hook_handle)
             {
-                DWORD errorCode = GetLastError();
-                show_last_error_message(L"SetWindowsHookEx", errorCode, L"PowerToys - Shortcut Guide");
-                auto errorMessage = get_last_error_message(errorCode);
-                Trace::Error(errorCode, errorMessage.has_value() ? errorMessage.value() : L"", L"OverlayWindow.enable.SetWindowsHookEx");
+                MessageBoxW(NULL, L"Cannot install keyboard listener.", L"PowerToys - Shortcut Guide", MB_OK | MB_ICONERROR);
             }
         }
         RegisterHotKey(winkey_popup->get_window_handle(), alternative_switch_hotkey_id, alternative_switch_modifier_mask, alternative_switch_vk_code);
@@ -340,7 +327,7 @@ void OverlayWindow::init_settings()
     try
     {
         PowerToysSettings::PowerToyValues settings =
-            PowerToysSettings::PowerToyValues::load_from_settings_file(OverlayWindow::get_key());
+            PowerToysSettings::PowerToyValues::load_from_settings_file(OverlayWindow::get_name());
         if (const auto val = settings.get_int_value(pressTime.name))
         {
             pressTime.value = *val;

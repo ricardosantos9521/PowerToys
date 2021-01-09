@@ -1,13 +1,11 @@
 #pragma once
 
-#include <map>
 #include <vector>
 #include <wil\resource.h>
 #include <winrt/base.h>
 
 #include "util.h"
 #include "Zone.h"
-#include "ZoneSet.h"
 
 namespace ZoneWindowDrawing
 {
@@ -26,7 +24,8 @@ namespace ZoneWindowDrawing
                            COLORREF zoneBorderColor,
                            COLORREF highlightColor,
                            int zoneOpacity,
-                           const IZoneSet::ZonesMap& zones,
+                           const std::vector<winrt::com_ptr<IZone>>& zones,
                            const std::vector<size_t>& highlightZones,
-                           bool flashMode) noexcept;
+                           bool flashMode,
+                           bool drawHints) noexcept;
 }

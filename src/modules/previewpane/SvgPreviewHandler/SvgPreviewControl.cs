@@ -3,18 +3,22 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Versioning;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Linq;
 using Common;
 using Common.Utilities;
-using Microsoft.PowerToys.PreviewHandler.Svg.Telemetry.Events;
-using Microsoft.PowerToys.PreviewHandler.Svg.Utilities;
 using Microsoft.PowerToys.Telemetry;
 using PreviewHandlerCommon;
+using SvgPreviewHandler.Telemetry.Events;
 
-namespace Microsoft.PowerToys.PreviewHandler.Svg
+namespace SvgPreviewHandler
 {
     /// <summary>
     /// Implementation of Control for Svg Preview Handler.
@@ -24,17 +28,17 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
         /// <summary>
         /// Extended Browser Control to display Svg.
         /// </summary>
-        private WebBrowserExt _browser;
+        private WebBrowserExt browser;
 
         /// <summary>
         /// Text box to display the information about blocked elements from Svg.
         /// </summary>
-        private RichTextBox _textBox;
+        private RichTextBox textBox;
 
         /// <summary>
         /// Represent if an text box info bar is added for showing message.
         /// </summary>
-        private bool _infoBarAdded;
+        private bool infoBarAdded = false;
 
         /// <summary>
         /// Start the preview on the Control.
@@ -42,13 +46,13 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
         /// <param name="dataSource">Stream reference to access source file.</param>
         public override void DoPreview<T>(T dataSource)
         {
-            InvokeOnControlThread(() =>
+            this.InvokeOnControlThread(() =>
             {
                 try
                 {
-                    _infoBarAdded = false;
+                    this.infoBarAdded = false;
                     string svgData = null;
-                    using (var stream = new ReadonlyStream(dataSource as IStream))
+                    using (var stream = new StreamWrapper(dataSource as IStream))
                     {
                         using (var reader = new StreamReader(stream))
                         {
@@ -59,23 +63,21 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
                     // Add a info bar on top of the Preview if any blocked element is present.
                     if (SvgPreviewHandlerHelper.CheckBlockedElements(svgData))
                     {
-                        _infoBarAdded = true;
-                        AddTextBoxControl(Resource.BlockedElementInfoText);
+                        this.infoBarAdded = true;
+                        this.AddTextBoxControl(Resource.BlockedElementInfoText);
                     }
 
-                    AddBrowserControl(svgData);
-                    Resize += FormResized;
+                    this.AddBrowserControl(svgData);
+                    this.Resize += this.FormResized;
                     base.DoPreview(dataSource);
                     PowerToysTelemetry.Log.WriteEvent(new SvgFilePreviewed());
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     PowerToysTelemetry.Log.WriteEvent(new SvgFilePreviewError { Message = ex.Message });
-                    Controls.Clear();
-                    _infoBarAdded = true;
-                    AddTextBoxControl(Resource.SvgNotPreviewedError);
+                    this.Controls.Clear();
+                    this.infoBarAdded = true;
+                    this.AddTextBoxControl(Resource.SvgNotPreviewedError);
                     base.DoPreview(dataSource);
                 }
             });
@@ -99,9 +101,9 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
         /// <param name="e">Provides data for the resize event.</param>
         private void FormResized(object sender, EventArgs e)
         {
-            if (_infoBarAdded)
+            if (this.infoBarAdded)
             {
-                _textBox.Width = Width;
+                this.textBox.Width = this.Width;
             }
         }
 
@@ -111,14 +113,14 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
         /// <param name="svgData">Svg to display on Browser Control.</param>
         private void AddBrowserControl(string svgData)
         {
-            _browser = new WebBrowserExt();
-            _browser.DocumentText = svgData;
-            _browser.Dock = DockStyle.Fill;
-            _browser.IsWebBrowserContextMenuEnabled = false;
-            _browser.ScriptErrorsSuppressed = true;
-            _browser.ScrollBarsEnabled = true;
-            _browser.AllowNavigation = false;
-            Controls.Add(_browser);
+            this.browser = new WebBrowserExt();
+            this.browser.DocumentText = svgData;
+            this.browser.Dock = DockStyle.Fill;
+            this.browser.IsWebBrowserContextMenuEnabled = false;
+            this.browser.ScriptErrorsSuppressed = true;
+            this.browser.ScrollBarsEnabled = true;
+            this.browser.AllowNavigation = false;
+            this.Controls.Add(this.browser);
         }
 
         /// <summary>
@@ -127,16 +129,16 @@ namespace Microsoft.PowerToys.PreviewHandler.Svg
         /// <param name="message">Message to be displayed in textbox.</param>
         private void AddTextBoxControl(string message)
         {
-            _textBox = new RichTextBox();
-            _textBox.Text = message;
-            _textBox.BackColor = Color.LightYellow;
-            _textBox.Multiline = true;
-            _textBox.Dock = DockStyle.Top;
-            _textBox.ReadOnly = true;
-            _textBox.ContentsResized += RTBContentsResized;
-            _textBox.ScrollBars = RichTextBoxScrollBars.None;
-            _textBox.BorderStyle = BorderStyle.None;
-            Controls.Add(_textBox);
+            this.textBox = new RichTextBox();
+            this.textBox.Text = message;
+            this.textBox.BackColor = Color.LightYellow;
+            this.textBox.Multiline = true;
+            this.textBox.Dock = DockStyle.Top;
+            this.textBox.ReadOnly = true;
+            this.textBox.ContentsResized += this.RTBContentsResized;
+            this.textBox.ScrollBars = RichTextBoxScrollBars.None;
+            this.textBox.BorderStyle = BorderStyle.None;
+            this.Controls.Add(this.textBox);
         }
     }
 }

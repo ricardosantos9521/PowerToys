@@ -12,13 +12,10 @@
 #include "common/common.h"
 #include "restart_elevated.h"
 #include "update_utils.h"
-#include "centralized_kb_hook.h"
 
 #include <common/json.h>
 #include <common\settings_helpers.cpp>
 #include <common/os-detect.h>
-#include <common/version.h>
-#include <common/VersionHelper.h>
 
 #define BUFSIZE 1024
 
@@ -51,9 +48,8 @@ json::JsonObject get_all_settings()
     return result;
 }
 
-std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObject& powertoys_configs)
+void dispatch_json_action_to_module(const json::JsonObject& powertoys_configs)
 {
-    std::optional<std::wstring> result;
     for (const auto& powertoy_element : powertoys_configs)
     {
         const std::wstring name{ powertoy_element.Key().c_str() };
@@ -80,15 +76,9 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                 }
                 else if (action == L"check_for_updates")
                 {
-                    std::wstring latestVersion = check_for_updates();
-                    VersionHelper current_version(VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
-                    bool isRunningLatest = latestVersion.compare(current_version.toWstring()) == 0;
-
-                    json::JsonObject json;
-                    json.SetNamedValue(L"version", json::JsonValue::CreateStringValue(latestVersion));
-                    json.SetNamedValue(L"isVersionLatest", json::JsonValue::CreateBooleanValue(isRunningLatest));
-
-                    result.emplace(json.Stringify());
+                    std::thread{ [] {
+                        check_for_updates();
+                    } }.detach();
                 }
             }
             catch (...)
@@ -101,17 +91,13 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
             modules().at(name)->call_custom_action(element.c_str());
         }
     }
-
-    return result;
 }
 
 void send_json_config_to_module(const std::wstring& module_key, const std::wstring& settings)
 {
-    auto moduleIt = modules().find(module_key);
-    if (moduleIt != modules().end())
+    if (modules().find(module_key) != modules().end())
     {
-        moduleIt->second->set_config(settings.c_str());
-        moduleIt->second.update_hotkeys();
+        modules().at(module_key)->set_config(settings.c_str());
     }
 }
 
@@ -160,11 +146,7 @@ void dispatch_received_json(const std::wstring& json_to_parse)
         }
         else if (name == L"action")
         {
-            auto result = dispatch_json_action_to_module(value.GetObjectW());
-            if (result.has_value())
-            {
-                current_settings_ipc->send(result.value());
-            }
+            dispatch_json_action_to_module(value.GetObjectW());
         }
     }
     return;

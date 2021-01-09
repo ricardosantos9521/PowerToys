@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Globalization;
+using Wox.Core.Resource;
 using Wox.Infrastructure.Storage;
 using Wox.Infrastructure.UserSettings;
 using Wox.Plugin;
@@ -33,6 +34,8 @@ namespace PowerLauncher.ViewModel
             _storage.Save();
         }
 
-        public string ActivatedTimes => string.Format(CultureInfo.InvariantCulture, Properties.Resources.about_activate_times, Settings.ActivateTimes);
+        private static Internationalization Translater => InternationalizationManager.Instance;
+
+        public string ActivatedTimes => string.Format(CultureInfo.InvariantCulture, Translater.GetTranslation("about_activate_times"), Settings.ActivateTimes);
     }
 }

@@ -2,10 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using ManagedCommon;
 using Microsoft.Plugin.WindowWalker.Components;
 using Wox.Plugin;
 
@@ -21,25 +19,19 @@ namespace Microsoft.Plugin.WindowWalker
 
         static Main()
         {
-            SearchController.Instance.OnSearchResultUpdateEventHandler += SearchResultUpdated;
+            SearchController.Instance.OnSearchResultUpdate += SearchResultUpdated;
             OpenWindows.Instance.UpdateOpenWindowsList();
         }
 
         public List<Result> Query(Query query)
         {
-            if (query == null)
-            {
-                throw new ArgumentNullException(nameof(query));
-            }
-
+            SearchController.Instance.UpdateSearchText(query.RawQuery).Wait();
             OpenWindows.Instance.UpdateOpenWindowsList();
-            SearchController.Instance.UpdateSearchText(query.Search).Wait();
-
             return _results.Select(x => new Result()
             {
                 Title = x.Result.Title,
                 IcoPath = IconPath,
-                SubTitle = Properties.Resources.wox_plugin_windowwalker_running + ": " + x.Result.ProcessName,
+                SubTitle = "Running: " + x.Result.ProcessName,
                 Action = c =>
                 {
                     x.Result.SwitchToWindow();
@@ -75,12 +67,12 @@ namespace Microsoft.Plugin.WindowWalker
 
         public string GetTranslatedPluginTitle()
         {
-            return Properties.Resources.wox_plugin_windowwalker_plugin_name;
+            return Context.API.GetTranslation("wox_plugin_windowwalker_plugin_name");
         }
 
         public string GetTranslatedPluginDescription()
         {
-            return Properties.Resources.wox_plugin_windowwalker_plugin_description;
+            return Context.API.GetTranslation("wox_plugin_windowwalker_plugin_description");
         }
 
         private static void SearchResultUpdated(object sender, SearchController.SearchResultUpdateEventArgs e)

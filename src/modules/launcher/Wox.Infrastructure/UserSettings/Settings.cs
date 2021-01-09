@@ -5,7 +5,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Drawing;
-using ManagedCommon;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Wox.Plugin;
@@ -45,7 +44,7 @@ namespace Wox.Infrastructure.UserSettings
 
         public string Language { get; set; } = "en";
 
-        public Theme Theme { get; set; } = Theme.System;
+        public string Theme { get; set; } = "Dark";
 
         public string QueryBoxFont { get; set; } = FontFamily.GenericSansSerif.Name;
 
@@ -62,6 +61,11 @@ namespace Wox.Infrastructure.UserSettings
         public string ResultFontWeight { get; set; }
 
         public string ResultFontStretch { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether when false Alphabet static service will always return empty results
+        /// </summary>
+        public bool ShouldUsePinyin { get; set; } = false;
 
         internal StringMatcher.SearchPrecisionScore QuerySearchPrecision { get; private set; } = StringMatcher.SearchPrecisionScore.Regular;
 
@@ -85,7 +89,7 @@ namespace Wox.Infrastructure.UserSettings
                 }
                 catch (ArgumentException e)
                 {
-                    Wox.Plugin.Logger.Log.Exception("Failed to load QuerySearchPrecisionString value from Settings file", e, GetType());
+                    Logger.Log.Exception(nameof(Settings), "Failed to load QuerySearchPrecisionString value from Settings file", e);
 
                     QuerySearchPrecision = StringMatcher.SearchPrecisionScore.Regular;
                     StringMatcher.Instance.UserSettingSearchPrecision = StringMatcher.SearchPrecisionScore.Regular;
@@ -167,8 +171,6 @@ namespace Wox.Infrastructure.UserSettings
         public bool RememberLastLaunchLocation { get; set; }
 
         public bool IgnoreHotkeysOnFullscreen { get; set; }
-
-        public bool UsePowerToysRunnerKeyboardHook { get; set; }
 
         public HttpProxy Proxy { get; set; } = new HttpProxy();
 

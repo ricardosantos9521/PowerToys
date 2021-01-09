@@ -14,7 +14,7 @@ namespace ImageResizer.Models
     public class ResizeSizeTests
     {
         [Fact]
-        public void NameWorks()
+        public void Name_works()
         {
             var size = new ResizeSize();
 
@@ -28,7 +28,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void NameReplacesTokens()
+        public void Name_replaces_tokens()
         {
             var args = new List<(string, string)>
             {
@@ -39,17 +39,16 @@ namespace ImageResizer.Models
             };
             foreach (var (name, expected) in args)
             {
-                var size = new ResizeSize
-                {
-                    Name = name,
-                };
+                var size = new ResizeSize();
+
+                size.Name = name;
 
                 Assert.Equal(expected, size.Name);
             }
         }
 
         [Fact]
-        public void FitWorks()
+        public void Fit_works()
         {
             var size = new ResizeSize();
 
@@ -63,7 +62,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void WidthWorks()
+        public void Width_works()
         {
             var size = new ResizeSize();
 
@@ -77,7 +76,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HeightWorks()
+        public void Height_works()
         {
             var size = new ResizeSize();
 
@@ -91,7 +90,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsTrueWhenWidthUnset()
+        public void HasAuto_returns_true_when_Width_unset()
         {
             var size = new ResizeSize
             {
@@ -103,7 +102,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsTrueWhenHeightUnset()
+        public void HasAuto_returns_true_when_Height_unset()
         {
             var size = new ResizeSize
             {
@@ -115,7 +114,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsFalseWhenWidthAndHeightSet()
+        public void HasAuto_returns_false_when_Width_and_Height_set()
         {
             var size = new ResizeSize
             {
@@ -127,7 +126,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void UnitWorks()
+        public void Unit_works()
         {
             var size = new ResizeSize();
 
@@ -141,7 +140,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetPixelWidthWorks()
+        public void GetPixelWidth_works()
         {
             var size = new ResizeSize
             {
@@ -155,7 +154,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetPixelHeightWorks()
+        public void GetPixelHeight_works()
         {
             var size = new ResizeSize
             {
@@ -171,7 +170,7 @@ namespace ImageResizer.Models
         [Theory]
         [InlineData(ResizeFit.Fit)]
         [InlineData(ResizeFit.Fill)]
-        public void GetPixelHeightUsesWidthWhenScaleByPercent(ResizeFit fit)
+        public void GetPixelHeight_uses_Width_when_scale_by_percent(ResizeFit fit)
         {
             var size = new ResizeSize
             {
@@ -187,7 +186,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenAutoAndFit()
+        public void ConvertToPixels_works_when_auto_and_fit()
         {
             var size = new ResizeSize
             {
@@ -201,7 +200,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenAutoAndNotFit()
+        public void ConvertToPixels_works_when_auto_and_not_fit()
         {
             var size = new ResizeSize
             {
@@ -215,7 +214,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenInches()
+        public void ConvertToPixels_works_when_inches()
         {
             var size = new ResizeSize
             {
@@ -229,7 +228,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenCentimeters()
+        public void ConvertToPixels_works_when_centimeters()
         {
             var size = new ResizeSize
             {
@@ -243,7 +242,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenPercent()
+        public void ConvertToPixels_works_when_percent()
         {
             var size = new ResizeSize
             {
@@ -257,7 +256,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenPixels()
+        public void ConvertToPixels_works_when_pixels()
         {
             var size = new ResizeSize
             {

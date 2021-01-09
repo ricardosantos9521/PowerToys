@@ -8,8 +8,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters;
 using System.Runtime.Serialization.Formatters.Binary;
-using Wox.Plugin;
-using Wox.Plugin.Logger;
+using Wox.Infrastructure.Logger;
 
 namespace Wox.Infrastructure.Storage
 {
@@ -45,8 +44,7 @@ namespace Wox.Infrastructure.Storage
                 if (File.Exists(FilePath))
                 {
                     File.Delete(FilePath);
-
-                    Log.Info($"Deleting cached data at <{FilePath}>", GetType());
+                    Log.Info($"|BinaryStorage.TryLoad|Deleting cached data| <{FilePath}>");
                 }
             }
 
@@ -54,8 +52,7 @@ namespace Wox.Infrastructure.Storage
             {
                 if (new FileInfo(FilePath).Length == 0)
                 {
-                    Log.Error($"Zero length cache file <{FilePath}>", GetType());
-
+                    Log.Error($"|BinaryStorage.TryLoad|Zero length cache file <{FilePath}>");
                     Save(defaultData);
                     return defaultData;
                 }
@@ -68,8 +65,7 @@ namespace Wox.Infrastructure.Storage
             }
             else
             {
-                Log.Info("Cache file not exist, load default data", GetType());
-
+                Log.Info("|BinaryStorage.TryLoad|Cache file not exist, load default data");
                 Save(defaultData);
                 return defaultData;
             }
@@ -91,8 +87,7 @@ namespace Wox.Infrastructure.Storage
             }
             catch (System.Exception e)
             {
-                Log.Exception($"Deserialize error for file <{FilePath}>", e, GetType());
-
+                Log.Exception($"|BinaryStorage.Deserialize|Deserialize error for file <{FilePath}>", e);
                 return defaultData;
             }
             finally
@@ -133,12 +128,12 @@ namespace Wox.Infrastructure.Storage
                 }
                 catch (SerializationException e)
                 {
-                    Log.Exception($"Serialize error for file <{FilePath}>", e, GetType());
+                    Log.Exception($"|BinaryStorage.Save|serialize error for file <{FilePath}>", e);
                 }
             }
 
             _storageHelper.Close();
-            Log.Info($"Saving cached data at <{FilePath}>", GetType());
+            Log.Info($"|BinaryStorage.Save|Saving cached data| <{FilePath}>");
         }
     }
 }

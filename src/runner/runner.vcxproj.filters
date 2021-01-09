@@ -36,9 +36,6 @@
     <ClCompile Include="action_runner_utils.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="centralized_kb_hook.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -76,10 +73,7 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="centralized_kb_hook.h">
-      <Filter>Utils</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

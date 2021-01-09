@@ -61,11 +61,11 @@ namespace FancyZonesEditor.Models
         private const string PriorityGridJsonTag = "priority-grid";
         private const string CustomJsonTag = "custom";
 
-        private const string PowerToysIssuesURL = "https://aka.ms/powerToysReportBug";
+        private const string PowerToysIssuesLink = "https://aka.ms/powerToysReportBug";
 
         public static void ShowExceptionMessageBox(string message, Exception exception = null)
         {
-            string fullMessage = ErrorMessageBoxMessage + PowerToysIssuesURL + " \n" + message;
+            string fullMessage = ErrorMessageBoxMessage + PowerToysIssuesLink + " \n" + message;
             if (exception != null)
             {
                 fullMessage += ": " + exception.Message;
@@ -384,8 +384,6 @@ namespace FancyZonesEditor.Models
             public int EditorSpacing { get; set; }
 
             public int EditorZoneCount { get; set; }
-
-            public int EditorSensitivityRadius { get; set; }
         }
 
         public void Apply()
@@ -426,7 +424,6 @@ namespace FancyZonesEditor.Models
                 EditorShowSpacing = settings.ShowSpacing,
                 EditorSpacing = settings.Spacing,
                 EditorZoneCount = settings.ZoneCount,
-                EditorSensitivityRadius = settings.SensitivityRadius,
             };
 
             JsonSerializerOptions options = new JsonSerializerOptions

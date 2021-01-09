@@ -6,7 +6,6 @@ using System;
 using System.Windows;
 using System.Windows.Interactivity;
 using System.Windows.Media.Animation;
-using ColorPicker.Constants;
 
 namespace ColorPicker.Behaviors
 {
@@ -38,31 +37,21 @@ namespace ColorPicker.Behaviors
 
         private void Appear()
         {
-            var duration = new Duration(TimeSpan.FromMilliseconds(250));
+            var opacityAppear = new DoubleAnimation(0, 1.0, new Duration(TimeSpan.FromMilliseconds(250)));
+            opacityAppear.EasingFunction = new QuadraticEase() { EasingMode = EasingMode.EaseOut };
 
-            var opacityAppear = new DoubleAnimation(0d, 1d, duration)
-            {
-                EasingFunction = new QuadraticEase() { EasingMode = EasingMode.EaseOut },
-            };
-
-            var resize = new DoubleAnimation(0d, WindowConstant.PickerWindowWidth, duration)
-            {
-                EasingFunction = new ExponentialEase() { EasingMode = EasingMode.EaseOut },
-            };
-
-            AssociatedObject.BeginAnimation(UIElement.OpacityProperty, opacityAppear);
-            AssociatedObject.BeginAnimation(FrameworkElement.WidthProperty, resize);
+            var resize = new DoubleAnimation(0, 180, new Duration(TimeSpan.FromMilliseconds(250)));
+            resize.EasingFunction = new ExponentialEase() { EasingMode = EasingMode.EaseOut };
+            AssociatedObject.BeginAnimation(Window.OpacityProperty, opacityAppear);
+            AssociatedObject.BeginAnimation(Window.WidthProperty, resize);
         }
 
         private void Hide()
         {
-            var duration = new Duration(TimeSpan.FromMilliseconds(1));
-
-            var opacityAppear = new DoubleAnimation(0d, duration);
-            var resize = new DoubleAnimation(0d, duration);
-
-            AssociatedObject.BeginAnimation(UIElement.OpacityProperty, opacityAppear);
-            AssociatedObject.BeginAnimation(FrameworkElement.WidthProperty, resize);
+            var opacityAppear = new DoubleAnimation(0, new Duration(TimeSpan.FromMilliseconds(1)));
+            var resize = new DoubleAnimation(0, new Duration(TimeSpan.FromMilliseconds(1)));
+            AssociatedObject.BeginAnimation(Window.OpacityProperty, opacityAppear);
+            AssociatedObject.BeginAnimation(Window.WidthProperty, resize);
         }
     }
 }
