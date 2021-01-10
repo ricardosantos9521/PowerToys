@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -25,3 +26,4 @@
 #include <unordered_set>
 #include <string>
 #include <ProjectTelemetry.h>
+#include <filesystem>

@@ -1,5 +1,7 @@
 #include "pch.h"
-#include <common/settings_objects.h>
+#include <common/SettingsAPI/settings_objects.h>
+#include <common/utils/resources.h>
+
 #include "lib/Settings.h"
 #include "lib/FancyZones.h"
 #include "trace.h"
@@ -34,24 +36,32 @@ namespace NonLocalizable
     const wchar_t IconKeyID[] = L"pt-fancy-zones";
     const wchar_t OverviewURL[] = L"https://aka.ms/PowerToysOverview_FancyZones";
     const wchar_t VideoURL[] = L"https://youtu.be/rTtGzZYAXgY";
+    const wchar_t PowerToysIssuesURL[] = L"https://aka.ms/powerToysReportBug";
 }
 
 struct FancyZonesSettings : winrt::implements<FancyZonesSettings, IFancyZonesSettings>
 {
 public:
-    FancyZonesSettings(HINSTANCE hinstance, PCWSTR name)
-        : m_hinstance(hinstance)
-        , m_moduleName(name)
+    FancyZonesSettings(HINSTANCE hinstance, PCWSTR name, PCWSTR key) :
+        m_hinstance(hinstance),
+        m_moduleName(name),
+        m_moduleKey(key)
     {
         LoadSettings(name, true);
     }
 
-    IFACEMETHODIMP_(void) SetCallback(IFancyZonesCallback* callback) { m_callback = callback; }
-    IFACEMETHODIMP_(void) ResetCallback() { m_callback = nullptr; }
-    IFACEMETHODIMP_(bool) GetConfig(_Out_ PWSTR buffer, _Out_ int *buffer_sizeg) noexcept;
-    IFACEMETHODIMP_(void) SetConfig(PCWSTR config) noexcept;
-    IFACEMETHODIMP_(void) CallCustomAction(PCWSTR action) noexcept;
-    IFACEMETHODIMP_(const Settings*) GetSettings() const noexcept { return &m_settings; }
+    IFACEMETHODIMP_(void)
+    SetCallback(IFancyZonesCallback* callback) { m_callback = callback; }
+    IFACEMETHODIMP_(void)
+    ResetCallback() { m_callback = nullptr; }
+    IFACEMETHODIMP_(bool)
+    GetConfig(_Out_ PWSTR buffer, _Out_ int* buffer_sizeg) noexcept;
+    IFACEMETHODIMP_(void)
+    SetConfig(PCWSTR config) noexcept;
+    IFACEMETHODIMP_(void)
+    CallCustomAction(PCWSTR action) noexcept;
+    IFACEMETHODIMP_(const Settings*)
+    GetSettings() const noexcept { return &m_settings; }
 
 private:
     void LoadSettings(PCWSTR config, bool fromFile) noexcept;
@@ -60,6 +70,7 @@ private:
     IFancyZonesCallback* m_callback{};
     const HINSTANCE m_hinstance;
     PCWSTR m_moduleName{};
+    PCWSTR m_moduleKey{};
 
     Settings m_settings;
 
@@ -68,7 +79,8 @@ private:
         PCWSTR name;
         bool* value;
         int resourceId;
-    } m_configBools[14 /* 15 */] = { // "Turning FLASHING_ZONE option off"
+    } m_configBools[14 /* 15 */] = {
+        // "Turning FLASHING_ZONE option off"
         { NonLocalizable::ShiftDragID, &m_settings.shiftDrag, IDS_SETTING_DESCRIPTION_SHIFTDRAG },
         { NonLocalizable::MouseSwitchID, &m_settings.mouseSwitch, IDS_SETTING_DESCRIPTION_MOUSESWITCH },
         { NonLocalizable::OverrideSnapHotKeysID, &m_settings.overrideSnapHotkeys, IDS_SETTING_DESCRIPTION_OVERRIDE_SNAP_HOTKEYS },
@@ -83,14 +95,14 @@ private:
         { NonLocalizable::OpenWindowOnActiveMonitorID, &m_settings.openWindowOnActiveMonitor, IDS_SETTING_DESCRIPTION_OPEN_WINDOW_ON_ACTIVE_MONITOR },
         { NonLocalizable::RestoreSizeID, &m_settings.restoreSize, IDS_SETTING_DESCRIPTION_RESTORESIZE },
         { NonLocalizable::UseCursorPosEditorStartupScreenID, &m_settings.use_cursorpos_editor_startupscreen, IDS_SETTING_DESCRIPTION_USE_CURSORPOS_EDITOR_STARTUPSCREEN },
-        { NonLocalizable::ShowOnAllMonitorsID, &m_settings.showZonesOnAllMonitors, IDS_SETTING_DESCRIPTION_SHOW_FANCY_ZONES_ON_ALL_MONITORS},
+        { NonLocalizable::ShowOnAllMonitorsID, &m_settings.showZonesOnAllMonitors, IDS_SETTING_DESCRIPTION_SHOW_FANCY_ZONES_ON_ALL_MONITORS },
         { NonLocalizable::SpanZonesAcrossMonitorsID, &m_settings.spanZonesAcrossMonitors, IDS_SETTING_DESCRIPTION_SPAN_ZONES_ACROSS_MONITORS },
-        { NonLocalizable::MakeDraggedWindowTransparentID, &m_settings.makeDraggedWindowTransparent, IDS_SETTING_DESCRIPTION_MAKE_DRAGGED_WINDOW_TRANSPARENT},
+        { NonLocalizable::MakeDraggedWindowTransparentID, &m_settings.makeDraggedWindowTransparent, IDS_SETTING_DESCRIPTION_MAKE_DRAGGED_WINDOW_TRANSPARENT },
     };
-
 };
 
-IFACEMETHODIMP_(bool) FancyZonesSettings::GetConfig(_Out_ PWSTR buffer, _Out_ int *buffer_size) noexcept
+IFACEMETHODIMP_(bool)
+FancyZonesSettings::GetConfig(_Out_ PWSTR buffer, _Out_ int* buffer_size) noexcept
 {
     PowerToysSettings::Settings settings(m_hinstance, m_moduleName);
 
@@ -106,8 +118,7 @@ IFACEMETHODIMP_(bool) FancyZonesSettings::GetConfig(_Out_ PWSTR buffer, _Out_ in
         NonLocalizable::ToggleEditorActionID, // action name.
         IDS_SETTING_LAUNCH_EDITOR_LABEL,
         IDS_SETTING_LAUNCH_EDITOR_BUTTON,
-        IDS_SETTING_LAUNCH_EDITOR_DESCRIPTION
-    );
+        IDS_SETTING_LAUNCH_EDITOR_DESCRIPTION);
     settings.add_hotkey(NonLocalizable::EditorHotkeyID, IDS_SETTING_LAUNCH_EDITOR_HOTKEY_LABEL, m_settings.editorHotkey);
 
     for (auto const& setting : m_configBools)
@@ -126,7 +137,8 @@ IFACEMETHODIMP_(bool) FancyZonesSettings::GetConfig(_Out_ PWSTR buffer, _Out_ in
     return settings.serialize_to_buffer(buffer, buffer_size);
 }
 
-IFACEMETHODIMP_(void) FancyZonesSettings::SetConfig(PCWSTR serializedPowerToysSettingsJson) noexcept try
+IFACEMETHODIMP_(void)
+FancyZonesSettings::SetConfig(PCWSTR serializedPowerToysSettingsJson) noexcept
 {
     LoadSettings(serializedPowerToysSettingsJson, false /*fromFile*/);
     SaveSettings();
@@ -136,106 +148,139 @@ IFACEMETHODIMP_(void) FancyZonesSettings::SetConfig(PCWSTR serializedPowerToysSe
     }
     Trace::SettingsChanged(m_settings);
 }
-CATCH_LOG();
 
-IFACEMETHODIMP_(void) FancyZonesSettings::CallCustomAction(PCWSTR action) noexcept try
+IFACEMETHODIMP_(void)
+FancyZonesSettings::CallCustomAction(PCWSTR action) noexcept
 {
-    // Parse the action values, including name.
-    PowerToysSettings::CustomActionObject action_object =
-        PowerToysSettings::CustomActionObject::from_json_string(action);
-
-    if (m_callback && action_object.get_name() == NonLocalizable::ToggleEditorActionID)
+    try
     {
-        m_callback->ToggleEditor();
+        // Parse the action values, including name.
+        PowerToysSettings::CustomActionObject action_object =
+            PowerToysSettings::CustomActionObject::from_json_string(action);
+
+        if (m_callback && action_object.get_name() == NonLocalizable::ToggleEditorActionID)
+        {
+            m_callback->ToggleEditor();
+        }
+    }
+    catch (...)
+    {
+        // Currently only custom action coming from main PowerToys window is request to launch editor.
+        // If new custom action is added, error message need to be modified.
+        std::wstring errorMessage = GET_RESOURCE_STRING(IDS_FANCYZONES_EDITOR_LAUNCH_ERROR) + L" " + NonLocalizable::PowerToysIssuesURL;
+        MessageBox(NULL,
+                   errorMessage.c_str(),
+                   GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str(),
+                   MB_OK);
     }
 }
-CATCH_LOG();
 
-void FancyZonesSettings::LoadSettings(PCWSTR config, bool fromFile) noexcept try
+void FancyZonesSettings::LoadSettings(PCWSTR config, bool fromFile) noexcept
 {
-    PowerToysSettings::PowerToyValues values = fromFile ?
-        PowerToysSettings::PowerToyValues::load_from_settings_file(m_moduleName) :
-        PowerToysSettings::PowerToyValues::from_json_string(config);
-
-    for (auto const& setting : m_configBools)
+    try
     {
-        if (const auto val = values.get_bool_value(setting.name))
+        PowerToysSettings::PowerToyValues values = fromFile ?
+                                                       PowerToysSettings::PowerToyValues::load_from_settings_file(m_moduleKey) :
+                                                       PowerToysSettings::PowerToyValues::from_json_string(config, m_moduleKey);
+
+        for (auto const& setting : m_configBools)
         {
-            *setting.value = *val;
+            if (const auto val = values.get_bool_value(setting.name))
+            {
+                *setting.value = *val;
+            }
         }
-    }
 
-    if (auto val = values.get_string_value(NonLocalizable::ZoneColorID))
-    {
-        m_settings.zoneColor = std::move(*val);
-    }
-
-    if (auto val = values.get_string_value(NonLocalizable::ZoneBorderColorID))
-    {
-        m_settings.zoneBorderColor = std::move(*val);
-    }
-
-    if (auto val = values.get_string_value(NonLocalizable::ZoneHighlightColorID))
-    {
-        m_settings.zoneHighlightColor = std::move(*val);
-    }
-
-    if (const auto val = values.get_json(NonLocalizable::EditorHotkeyID))
-    {
-        m_settings.editorHotkey = PowerToysSettings::HotkeyObject::from_json(*val);
-    }
-
-    if (auto val = values.get_string_value(NonLocalizable::ExcludedAppsID))
-    {
-        m_settings.excludedApps = std::move(*val);
-        m_settings.excludedAppsArray.clear();
-        auto excludedUppercase = m_settings.excludedApps;
-        CharUpperBuffW(excludedUppercase.data(), (DWORD)excludedUppercase.length());
-        std::wstring_view view(excludedUppercase);
-        while (view.starts_with('\n') || view.starts_with('\r'))
+        if (auto val = values.get_string_value(NonLocalizable::ZoneColorID))
         {
-            view.remove_prefix(1);
+            m_settings.zoneColor = std::move(*val);
         }
-        while (!view.empty())
+
+        if (auto val = values.get_string_value(NonLocalizable::ZoneBorderColorID))
         {
-            auto pos = (std::min)(view.find_first_of(L"\r\n"), view.length());
-            m_settings.excludedAppsArray.emplace_back(view.substr(0, pos));
-            view.remove_prefix(pos);
+            m_settings.zoneBorderColor = std::move(*val);
+        }
+
+        if (auto val = values.get_string_value(NonLocalizable::ZoneHighlightColorID))
+        {
+            m_settings.zoneHighlightColor = std::move(*val);
+        }
+
+        if (const auto val = values.get_json(NonLocalizable::EditorHotkeyID))
+        {
+            m_settings.editorHotkey = PowerToysSettings::HotkeyObject::from_json(*val);
+        }
+
+        if (auto val = values.get_string_value(NonLocalizable::ExcludedAppsID))
+        {
+            m_settings.excludedApps = std::move(*val);
+            m_settings.excludedAppsArray.clear();
+            auto excludedUppercase = m_settings.excludedApps;
+            CharUpperBuffW(excludedUppercase.data(), (DWORD)excludedUppercase.length());
+            std::wstring_view view(excludedUppercase);
             while (view.starts_with('\n') || view.starts_with('\r'))
             {
                 view.remove_prefix(1);
             }
+            while (!view.empty())
+            {
+                auto pos = (std::min)(view.find_first_of(L"\r\n"), view.length());
+                m_settings.excludedAppsArray.emplace_back(view.substr(0, pos));
+                view.remove_prefix(pos);
+                while (view.starts_with('\n') || view.starts_with('\r'))
+                {
+                    view.remove_prefix(1);
+                }
+            }
+        }
+
+        if (auto val = values.get_int_value(NonLocalizable::ZoneHighlightOpacityID))
+        {
+            m_settings.zoneHighlightOpacity = *val;
         }
     }
-
-    if (auto val = values.get_int_value(NonLocalizable::ZoneHighlightOpacityID))
+    catch (...)
     {
-        m_settings.zoneHighlightOpacity = *val;
+        // Failure to load settings does not break FancyZones functionality. Display error message and continue with default settings.
+        MessageBox(NULL,
+                   GET_RESOURCE_STRING(IDS_FANCYZONES_SETTINGS_LOAD_ERROR).c_str(),
+                   GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str(),
+                   MB_OK);
     }
 }
-CATCH_LOG();
 
-void FancyZonesSettings::SaveSettings() noexcept try
+void FancyZonesSettings::SaveSettings() noexcept
 {
-    PowerToysSettings::PowerToyValues values(m_moduleName);
-
-    for (auto const& setting : m_configBools)
+    try
     {
-        values.add_property(setting.name, *setting.value);
+        PowerToysSettings::PowerToyValues values(m_moduleName, m_moduleKey);
+
+        for (auto const& setting : m_configBools)
+        {
+            values.add_property(setting.name, *setting.value);
+        }
+
+        values.add_property(NonLocalizable::ZoneColorID, m_settings.zoneColor);
+        values.add_property(NonLocalizable::ZoneBorderColorID, m_settings.zoneBorderColor);
+        values.add_property(NonLocalizable::ZoneHighlightColorID, m_settings.zoneHighlightColor);
+        values.add_property(NonLocalizable::ZoneHighlightOpacityID, m_settings.zoneHighlightOpacity);
+        values.add_property(NonLocalizable::EditorHotkeyID, m_settings.editorHotkey.get_json());
+        values.add_property(NonLocalizable::ExcludedAppsID, m_settings.excludedApps);
+
+        values.save_to_settings_file();
     }
-
-    values.add_property(NonLocalizable::ZoneColorID, m_settings.zoneColor);
-    values.add_property(NonLocalizable::ZoneBorderColorID, m_settings.zoneBorderColor);
-    values.add_property(NonLocalizable::ZoneHighlightColorID, m_settings.zoneHighlightColor);
-    values.add_property(NonLocalizable::ZoneHighlightOpacityID, m_settings.zoneHighlightOpacity);
-    values.add_property(NonLocalizable::EditorHotkeyID, m_settings.editorHotkey.get_json());
-    values.add_property(NonLocalizable::ExcludedAppsID, m_settings.excludedApps);
-
-    values.save_to_settings_file();
+    catch (...)
+    {
+        // Failure to save settings does not break FancyZones functionality. Display error message and continue with currently cached settings.
+        std::wstring errorMessage = GET_RESOURCE_STRING(IDS_FANCYZONES_SETTINGS_LOAD_ERROR) + L" " + NonLocalizable::PowerToysIssuesURL;
+        MessageBox(NULL,
+                   errorMessage.c_str(),
+                   GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str(),
+                   MB_OK);
+    }
 }
-CATCH_LOG();
 
-winrt::com_ptr<IFancyZonesSettings> MakeFancyZonesSettings(HINSTANCE hinstance, PCWSTR name) noexcept
+winrt::com_ptr<IFancyZonesSettings> MakeFancyZonesSettings(HINSTANCE hinstance, PCWSTR name, PCWSTR key) noexcept
 {
-    return winrt::make_self<FancyZonesSettings>(hinstance, name);
+    return winrt::make_self<FancyZonesSettings>(hinstance, name, key);
 }

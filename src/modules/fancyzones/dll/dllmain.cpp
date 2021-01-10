@@ -1,8 +1,8 @@
 #include "pch.h"
-#include <common/settings_objects.h>
-#include <common/common.h>
+
+#include <common/SettingsAPI/settings_objects.h>
 #include <common/debug_control.h>
-#include <common/LowlevelKeyboardEvent.h>
+#include <common/hooks/LowlevelKeyboardEvent.h>
 #include <interface/powertoy_module_interface.h>
 #include <lib/ZoneSet.h>
 
@@ -12,8 +12,11 @@
 #include <lib/FancyZones.h>
 #include <lib/FancyZonesData.h>
 #include <lib/FancyZonesWinHookEventIDs.h>
-
-extern "C" IMAGE_DOS_HEADER __ImageBase;
+#include <lib/FancyZonesData.cpp>
+#include <common/logger/logger.h>
+#include <common/utils/resources.h>
+#include <common/utils/winapi_error.h>
+#include <common/utils/window.h>
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
@@ -37,10 +40,16 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 class FancyZonesModule : public PowertoyModuleIface
 {
 public:
-    // Return the display name of the powertoy, this will be cached
+    // Return the localized display name of the powertoy
     virtual PCWSTR get_name() override
     {
         return app_name.c_str();
+    }
+
+    // Return the non localized key of the powertoy, this will be cached by the runner
+    virtual const wchar_t* get_key() override
+    {
+        return app_key.c_str();
     }
 
     // Return JSON with the configuration options.
@@ -67,11 +76,13 @@ public:
     // Enable the powertoy
     virtual void enable()
     {
+        Logger::info("FancyZones enabling");
+
         if (!m_app)
         {
             InitializeWinhookEventIds();
             Trace::FancyZones::EnableFancyZones(true);
-            m_app = MakeFancyZones(reinterpret_cast<HINSTANCE>(&__ImageBase), m_settings);
+            m_app = MakeFancyZones(reinterpret_cast<HINSTANCE>(&__ImageBase), m_settings, std::bind(&FancyZonesModule::disable, this));
 #if defined(DISABLE_LOWLEVEL_HOOKS_WHEN_DEBUGGED)
             const bool hook_disabled = IsDebuggerPresent();
 #else
@@ -82,10 +93,10 @@ public:
                 s_llKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), NULL);
                 if (!s_llKeyboardHook)
                 {
-                    MessageBoxW(NULL,
-                                GET_RESOURCE_STRING(IDS_KEYBOARD_LISTENER_ERROR).c_str(),
-                                GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str(),
-                                MB_OK | MB_ICONERROR);
+                    DWORD errorCode = GetLastError();
+                    show_last_error_message(L"SetWindowsHookEx", errorCode, GET_RESOURCE_STRING(IDS_POWERTOYS_FANCYZONES).c_str());
+                    auto errorMessage = get_last_error_message(errorCode);
+                    Trace::FancyZones::Error(errorCode, errorMessage.has_value() ? errorMessage.value() : L"", L"enable.SetWindowsHookEx");
                 }
             }
 
@@ -123,13 +134,15 @@ public:
     // Disable the powertoy
     virtual void disable()
     {
+        Logger::info("FancyZones disabling");
+
         Disable(true);
     }
 
     // Returns if the powertoy is enabled
     virtual bool is_enabled() override
     {
-        return (m_app != nullptr);
+        return m_app != nullptr;
     }
 
     // Destroy the powertoy and free memory
@@ -142,7 +155,11 @@ public:
     FancyZonesModule()
     {
         app_name = GET_RESOURCE_STRING(IDS_FANCYZONES);
-        m_settings = MakeFancyZonesSettings(reinterpret_cast<HINSTANCE>(&__ImageBase), FancyZonesModule::get_name());
+        app_key = NonLocalizable::FancyZonesStr;
+        std::filesystem::path logFilePath(PTSettingsHelper::get_module_save_folder_location(app_key));
+        logFilePath.append(LogSettings::fancyZonesLogPath);
+        Logger::init(LogSettings::fancyZonesLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
+        m_settings = MakeFancyZonesSettings(reinterpret_cast<HINSTANCE>(&__ImageBase), FancyZonesModule::get_name(), FancyZonesModule::get_key());
         FancyZonesDataInstance().LoadFancyZonesData();
         s_instance = this;
     }
@@ -190,12 +207,14 @@ private:
     winrt::com_ptr<IFancyZones> m_app;
     winrt::com_ptr<IFancyZonesSettings> m_settings;
     std::wstring app_name;
+    //contains the non localized key of the powertoy
+    std::wstring app_key;
 
-    static inline FancyZonesModule* s_instance;
-    static inline HHOOK s_llKeyboardHook;
+    static inline FancyZonesModule* s_instance = nullptr;
+    static inline HHOOK s_llKeyboardHook = nullptr;
 
     std::vector<HWINEVENTHOOK> m_staticWinEventHooks;
-    HWINEVENTHOOK m_objectLocationWinEventHook;
+    HWINEVENTHOOK m_objectLocationWinEventHook = nullptr;
 
     static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     {

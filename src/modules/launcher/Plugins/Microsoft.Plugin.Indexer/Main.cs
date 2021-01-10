@@ -7,22 +7,25 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
+using ManagedCommon;
 using Microsoft.Plugin.Indexer.DriveDetection;
 using Microsoft.Plugin.Indexer.SearchHelper;
-using Microsoft.PowerToys.Settings.UI.Lib;
+using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.Search.Interop;
-using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
+using Wox.Plugin.Logger;
 
 namespace Microsoft.Plugin.Indexer
 {
     internal class Main : ISettingProvider, IPlugin, ISavable, IPluginI18n, IContextMenu, IDisposable, IDelayedExecutionPlugin
     {
+        private static readonly IFileSystem _fileSystem = new FileSystem();
+
         // This variable contains metadata about the Plugin
         private PluginInitContext _context;
 
@@ -37,7 +40,7 @@ namespace Microsoft.Plugin.Indexer
         private readonly WindowsSearchAPI _api = new WindowsSearchAPI(_search);
 
         // To obtain information regarding the drives that are indexed
-        private readonly IndexerDriveDetection _driveDetection = new IndexerDriveDetection(new RegistryWrapper());
+        private readonly IndexerDriveDetection _driveDetection = new IndexerDriveDetection(new RegistryWrapper(), new DriveDetection.DriveInfoWrapper());
 
         // Reserved keywords in oleDB
         private readonly string reservedStringPattern = @"^[\/\\\$\%]+$|^.*[<>].*$";
@@ -77,8 +80,8 @@ namespace Microsoft.Plugin.Indexer
                         {
                             results.Add(new Result
                             {
-                                Title = _context.API.GetTranslation("Microsoft_plugin_indexer_drivedetectionwarning"),
-                                SubTitle = _context.API.GetTranslation("Microsoft_plugin_indexer_disable_warning_in_settings"),
+                                Title = Properties.Resources.Microsoft_plugin_indexer_drivedetectionwarning,
+                                SubTitle = Properties.Resources.Microsoft_plugin_indexer_disable_warning_in_settings,
                                 IcoPath = WarningIconPath,
                                 Action = e =>
                                 {
@@ -88,7 +91,7 @@ namespace Microsoft.Plugin.Indexer
                                     }
                                     catch (Exception ex)
                                     {
-                                        Log.Exception("Microsoft.Plugin.Indexer", $"Unable to launch Windows Search Settings: {ex.Message}", ex, "Query");
+                                        Log.Exception($"Unable to launch Windows Search Settings: {ex.Message}", ex, GetType());
                                     }
 
                                     return true;
@@ -98,7 +101,7 @@ namespace Microsoft.Plugin.Indexer
 
                         // This uses the Microsoft.Search.Interop assembly
                         var searchManager = new CSearchManager();
-                        var searchResultsList = _api.Search(searchQuery, searchManager, isFullQuery, maxCount: _settings.MaxSearchCount).ToList();
+                        var searchResultsList = _api.Search(searchQuery, searchManager, maxCount: _settings.MaxSearchCount).ToList();
 
                         // If the delayed execution query is not required (since the SQL query is fast) return empty results
                         if (searchResultsList.Count == 0 && isFullQuery)
@@ -109,17 +112,19 @@ namespace Microsoft.Plugin.Indexer
                         foreach (var searchResult in searchResultsList)
                         {
                             var path = searchResult.Path;
-                            var toolTipTitle = string.Format(CultureInfo.CurrentCulture, "{0} : {1}", _context.API.GetTranslation("Microsoft_plugin_indexer_name"), searchResult.Title);
-                            var toolTipText = string.Format(CultureInfo.CurrentCulture, "{0} : {1}", _context.API.GetTranslation("Microsoft_plugin_indexer_path"), path);
+
+                            // Using CurrentCulture since this is user facing
+                            var toolTipTitle = string.Format(CultureInfo.CurrentCulture, "{0} : {1}", Properties.Resources.Microsoft_plugin_indexer_name, searchResult.Title);
+                            var toolTipText = string.Format(CultureInfo.CurrentCulture, "{0} : {1}", Properties.Resources.Microsoft_plugin_indexer_path, path);
                             string workingDir = null;
                             if (_settings.UseLocationAsWorkingDir)
                             {
-                                workingDir = Path.GetDirectoryName(path);
+                                workingDir = _fileSystem.Path.GetDirectoryName(path);
                             }
 
                             Result r = new Result();
                             r.Title = searchResult.Title;
-                            r.SubTitle = "Search: " + path;
+                            r.SubTitle = Properties.Resources.Microsoft_plugin_indexer_subtitle_header + ": " + path;
                             r.IcoPath = path;
                             r.ToolTipData = new ToolTipData(toolTipTitle, toolTipText);
                             r.Action = c =>
@@ -138,7 +143,7 @@ namespace Microsoft.Plugin.Indexer
                                 catch (Win32Exception)
                                 {
                                     var name = $"Plugin: {_context.CurrentPluginMetadata.Name}";
-                                    var msg = "Can't Open this file";
+                                    var msg = Properties.Resources.Microsoft_plugin_indexer_file_open_failed;
                                     _context.API.ShowMsg(name, msg, string.Empty);
                                     hide = false;
                                 }
@@ -148,7 +153,7 @@ namespace Microsoft.Plugin.Indexer
                             r.ContextData = searchResult;
 
                             // If the result is a directory, then it's display should show a directory.
-                            if (Directory.Exists(path))
+                            if (_fileSystem.Directory.Exists(path))
                             {
                                 r.QueryTextDisplay = path;
                             }
@@ -163,7 +168,7 @@ namespace Microsoft.Plugin.Indexer
                     }
                     catch (Exception ex)
                     {
-                        Log.Info(ex.ToString());
+                        Log.Exception("Something failed", ex, GetType());
                     }
                 }
             }
@@ -174,7 +179,8 @@ namespace Microsoft.Plugin.Indexer
         // This function uses the Windows indexer and returns the list of results obtained. This version is required to implement the interface
         public List<Result> Query(Query query)
         {
-            return Query(query, false);
+            // All plugins have to implement IPlugin interface. We return empty collection as we do not want any computation with constant search plugins.
+            return new List<Result>();
         }
 
         public void Init(PluginInitContext context)
@@ -206,18 +212,16 @@ namespace Microsoft.Plugin.Indexer
             UpdateIconPath(newTheme);
         }
 
-        // TODO: Localize the strings
         // Set the Plugin Title
         public string GetTranslatedPluginTitle()
         {
-            return "Windows Indexer Plugin";
+            return Properties.Resources.Microsoft_plugin_indexer_plugin_name;
         }
 
-        // TODO: Localize the string
         // Set the plugin Description
         public string GetTranslatedPluginDescription()
         {
-            return "Returns files and folders";
+            return Properties.Resources.Microsoft_plugin_indexer_plugin_description;
         }
 
         public List<ContextMenuResult> LoadContextMenus(Result selectedResult)

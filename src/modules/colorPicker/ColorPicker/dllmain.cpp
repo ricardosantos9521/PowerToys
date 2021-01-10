@@ -1,13 +1,14 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
-#include <common/common.h>
+
 #include <interface/powertoy_module_interface.h>
 #include "trace.h"
 #include "Generated Files/resource.h"
-#include <common\settings_objects.h>
-#include <common\os-detect.h>
+#include <common/SettingsAPI/settings_objects.h>
+#include <common/utils/os-detect.h>
+#include <common/utils/resources.h>
 
-extern "C" IMAGE_DOS_HEADER __ImageBase;
+#include <colorPicker/ColorPicker/ColorPickerConstants.h>
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -38,6 +39,9 @@ private:
 
     std::wstring app_name;
 
+    //contains the non localized key of the powertoy
+    std::wstring app_key;
+
     HANDLE m_hProcess;
 
     // Time to wait for process to close after sending WM_CLOSE signal
@@ -47,6 +51,7 @@ public:
     ColorPicker()
     {
         app_name = GET_RESOURCE_STRING(IDS_COLORPICKER_NAME);
+        app_key = ColorPickerConstants::ModuleKey;
     }
 
     ~ColorPicker()
@@ -63,10 +68,16 @@ public:
         delete this;
     }
 
-    // Return the display name of the powertoy, this will be cached by the runner
+    // Return the localized display name of the powertoy
     virtual const wchar_t* get_name() override
     {
         return app_name.c_str();
+    }
+
+    // Return the non localized key of the powertoy, this will be cached by the runner
+    virtual const wchar_t* get_key() override
+    {
+        return app_key.c_str();
     }
 
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
@@ -92,7 +103,7 @@ public:
         {
             // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config);
+                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
 
             // If you don't need to do any custom processing of the settings, proceed
             // to persists the values calling:
@@ -118,7 +129,7 @@ public:
 
             SHELLEXECUTEINFOW sei{ sizeof(sei) };
             sei.fMask = { SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI };
-            sei.lpFile = L"modules\\ColorPicker\\ColorPicker.exe";
+            sei.lpFile = L"modules\\ColorPicker\\ColorPickerUI.exe";
             sei.nShow = SW_SHOWNORMAL;
             sei.lpParameters = executable_args.data();
             ShellExecuteExW(&sei);

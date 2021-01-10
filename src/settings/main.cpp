@@ -2,18 +2,14 @@
 #include <Commdlg.h>
 #include "StreamUriResolverFromFile.h"
 #include <Shellapi.h>
-#include <common/two_way_pipe_message_ipc.h>
+#include <common/interop/two_way_pipe_message_ipc.h>
 #include <ShellScalingApi.h>
 #include "resource.h"
-#include <common/dpi_aware.h>
-#include <common/common.h>
-#include <common/comUtils.h>
+#include <common/display/dpi_aware.h>
+#include <common/comUtils/comUtils.h>
 
 #include "trace.h"
-
-#pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "shcore.lib")
-#pragma comment(lib, "windowsapp")
+#include <common/utils/elevation.h>
 
 #ifdef _DEBUG
 #define _DEBUG_WITH_LOCALHOST 0
@@ -526,7 +522,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     g_main_wnd = create_main_window(hInstance);
     if (g_main_wnd == nullptr)
     {
-        MessageBox(NULL, L"Failed to create main window.\nPlease report the bug to https://aka.ms/powerToysReportBugF", L"PowerToys Settings Error", MB_OK);
+        MessageBox(NULL, L"Failed to create main window.\nPlease report the bug to https://aka.ms/powerToysReportBug", L"PowerToys Settings Error", MB_OK);
         exit(1);
     }
     initialize_webview(nShowCmd);

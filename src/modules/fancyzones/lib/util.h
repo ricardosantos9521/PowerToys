@@ -1,20 +1,15 @@
 #pragma once
 
 #include "gdiplus.h"
+#include <common/utils/string_utils.h>
+
+namespace FancyZonesDataTypes
+{
+    struct DeviceIdData;
+}
 
 namespace FancyZonesUtils
 {
-    // Window properties relevant to FancyZones
-    struct FancyZonesWindowInfo
-    {
-        // True if from the styles the window looks like a standard window
-        bool standardWindow = false;
-        // True if the window is a top-level window that does not have a visible owner
-        bool noVisibleOwner = false;
-        // Path to the executable owning the window
-        std::wstring processPath;
-    };
-
     struct Rect
     {
         Rect() {}
@@ -96,31 +91,21 @@ namespace FancyZonesUtils
             SRCCOPY);
     }
 
-    inline void ParseDeviceId(PCWSTR deviceId, PWSTR parsedId, size_t size)
+    inline COLORREF HexToRGB(std::wstring_view hex, const COLORREF fallbackColor = RGB(255, 255, 255))
     {
-        // We're interested in the unique part between the first and last #'s
-        // Example input: \\?\DISPLAY#DELA026#5&10a58c63&0&UID16777488#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}
-        // Example output: DELA026#5&10a58c63&0&UID16777488
-        const std::wstring defaultDeviceId = L"FallbackDevice";
-        if (!deviceId)
-        {
-            StringCchCopy(parsedId, size, defaultDeviceId.c_str());
-            return;
-        }
-        wchar_t buffer[256];
-        StringCchCopy(buffer, 256, deviceId);
+        hex = left_trim<wchar_t>(trim<wchar_t>(hex), L"#");
 
-        PWSTR pszStart = wcschr(buffer, L'#');
-        PWSTR pszEnd = wcsrchr(buffer, L'#');
-        if (pszStart && pszEnd && (pszStart != pszEnd))
+        try
         {
-            pszStart++; // skip past the first #
-            *pszEnd = '\0';
-            StringCchCopy(parsedId, size, pszStart);
+            const long long tmp = std::stoll(hex.data(), nullptr, 16);
+            const BYTE nR = static_cast<BYTE>((tmp & 0xFF0000) >> 16);
+            const BYTE nG = static_cast<BYTE>((tmp & 0xFF00) >> 8);
+            const BYTE nB = static_cast<BYTE>((tmp & 0xFF));
+            return RGB(nR, nG, nB);
         }
-        else
+        catch (const std::exception&)
         {
-            StringCchCopy(parsedId, size, defaultDeviceId.c_str());
+            return fallbackColor;
         }
     }
 
@@ -142,6 +127,28 @@ namespace FancyZonesUtils
             if (GetMonitorInfo(monitor, &mi))
             {
                 result.push_back({ monitor, mi.*member });
+            }
+
+            return TRUE;
+        };
+
+        EnumDisplayMonitors(NULL, NULL, enumMonitors, reinterpret_cast<LPARAM>(&result));
+        return result;
+    }
+
+    template<RECT MONITORINFO::*member>
+    std::vector<std::pair<HMONITOR, MONITORINFOEX>> GetAllMonitorInfo()
+    {
+        using result_t = std::vector<std::pair<HMONITOR, MONITORINFOEX>>;
+        result_t result;
+
+        auto enumMonitors = [](HMONITOR monitor, HDC hdc, LPRECT pRect, LPARAM param) -> BOOL {
+            MONITORINFOEX mi;
+            mi.cbSize = sizeof(mi);
+            result_t& result = *reinterpret_cast<result_t*>(param);
+            if (GetMonitorInfo(monitor, &mi))
+            {
+                result.push_back({ monitor, mi });
             }
 
             return TRUE;
@@ -177,11 +184,14 @@ namespace FancyZonesUtils
         return result;
     }
 
+    std::wstring GetDisplayDeviceId(const std::wstring& device, std::unordered_map<std::wstring, DWORD>& displayDeviceIdxMap);
+
     UINT GetDpiForMonitor(HMONITOR monitor) noexcept;
     void OrderMonitors(std::vector<std::pair<HMONITOR, RECT>>& monitorInfo);
     void SizeWindowToRect(HWND window, RECT rect) noexcept;
 
-    FancyZonesWindowInfo GetFancyZonesWindowInfo(HWND window);
+    bool HasNoVisibleOwner(HWND window) noexcept;
+    bool IsStandardWindow(HWND window);
     bool IsCandidateForLastKnownZone(HWND window, const std::vector<std::wstring>& excludedApps) noexcept;
     bool IsCandidateForZoning(HWND window, const std::vector<std::wstring>& excludedApps) noexcept;
 
@@ -191,8 +201,17 @@ namespace FancyZonesUtils
     void RestoreWindowOrigin(HWND window) noexcept;
 
     bool IsValidGuid(const std::wstring& str);
+
+    std::wstring GenerateUniqueId(HMONITOR monitor, const std::wstring& devideId, const std::wstring& virtualDesktopId);
+    std::wstring GenerateUniqueIdAllMonitorsArea(const std::wstring& virtualDesktopId);
+
+    std::wstring TrimDeviceId(const std::wstring& deviceId);
+    std::optional<FancyZonesDataTypes::DeviceIdData> ParseDeviceId(const std::wstring& deviceId);
     bool IsValidDeviceId(const std::wstring& str);
 
     RECT PrepareRectForCycling(RECT windowRect, RECT zoneWindowRect, DWORD vkCode) noexcept;
     size_t ChooseNextZoneByPosition(DWORD vkCode, RECT windowRect, const std::vector<RECT>& zoneRects) noexcept;
+
+    // If HWND is already dead, we assume it wasn't elevated
+    bool IsProcessOfWindowElevated(HWND window);
 }

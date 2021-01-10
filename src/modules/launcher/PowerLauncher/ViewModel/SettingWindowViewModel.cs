@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Globalization;
-using Wox.Core.Resource;
 using Wox.Infrastructure.Storage;
 using Wox.Infrastructure.UserSettings;
 using Wox.Plugin;
@@ -12,11 +11,11 @@ namespace PowerLauncher.ViewModel
 {
     public class SettingWindowViewModel : BaseModel
     {
-        private readonly WoxJsonStorage<Settings> _storage;
+        private readonly WoxJsonStorage<PowerToysRunSettings> _storage;
 
         public SettingWindowViewModel()
         {
-            _storage = new WoxJsonStorage<Settings>();
+            _storage = new WoxJsonStorage<PowerToysRunSettings>();
             Settings = _storage.Load();
             Settings.PropertyChanged += (s, e) =>
             {
@@ -27,15 +26,13 @@ namespace PowerLauncher.ViewModel
             };
         }
 
-        public Settings Settings { get; set; }
+        public PowerToysRunSettings Settings { get; set; }
 
         public void Save()
         {
             _storage.Save();
         }
 
-        private static Internationalization Translater => InternationalizationManager.Instance;
-
-        public string ActivatedTimes => string.Format(CultureInfo.InvariantCulture, Translater.GetTranslation("about_activate_times"), Settings.ActivateTimes);
+        public string ActivatedTimes => string.Format(CultureInfo.InvariantCulture, Properties.Resources.about_activate_times, Settings.ActivateTimes);
     }
 }

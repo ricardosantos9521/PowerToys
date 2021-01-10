@@ -5,24 +5,29 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Windows.Input;
 using ColorPicker.Helpers;
 using ColorPicker.Settings;
 using ColorPicker.Telemetry;
-using Microsoft.PowerToys.Settings.UI.Lib.Utilities;
+using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
+using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 using Microsoft.PowerToys.Telemetry;
-using static ColorPicker.Win32Apis;
+using static ColorPicker.NativeMethods;
 
 namespace ColorPicker.Keyboard
 {
     [Export(typeof(KeyboardMonitor))]
-    public class KeyboardMonitor
+    public class KeyboardMonitor : IDisposable
     {
         private readonly AppStateHandler _appStateHandler;
         private readonly IUserSettings _userSettings;
+        private List<string> _previouslyPressedKeys;
 
         private List<string> _activationKeys = new List<string>();
         private GlobalKeyboardHook _keyboardHook;
+        private bool disposedValue;
+        private bool _activationShortcutPressed;
 
         [ImportingConstructor]
         public KeyboardMonitor(AppStateHandler appStateHandler, IUserSettings userSettings)
@@ -78,20 +83,39 @@ namespace ColorPicker.Keyboard
             // If the last key pressed is a modifier key, then currentlyPressedKeys cannot possibly match with _activationKeys
             // because _activationKeys contains exactly 1 non-modifier key. Hence, there's no need to check if `name` is a
             // modifier key or to do any additional processing on it.
-
-            // Check pressed modifier keys.
-            AddModifierKeys(currentlyPressedKeys);
-
             if (e.KeyboardState == GlobalKeyboardHook.KeyboardState.KeyDown || e.KeyboardState == GlobalKeyboardHook.KeyboardState.SysKeyDown)
             {
+                // Check pressed modifier keys.
+                AddModifierKeys(currentlyPressedKeys);
+
                 currentlyPressedKeys.Add(name);
             }
 
             currentlyPressedKeys.Sort();
 
+            if (currentlyPressedKeys.Count == 0 && _previouslyPressedKeys.Count != 0)
+            {
+                // no keys pressed, we can enable activation shortcut again
+                _activationShortcutPressed = false;
+            }
+
+            _previouslyPressedKeys = currentlyPressedKeys;
+
             if (ArraysAreSame(currentlyPressedKeys, _activationKeys))
             {
-                _appStateHandler.ShowColorPicker();
+                // avoid triggering this action multiple times as this will be called nonstop while keys are pressed
+                if (!_activationShortcutPressed)
+                {
+                    _activationShortcutPressed = true;
+                    if (_userSettings.ActivationAction.Value == ColorPickerActivationAction.OpenEditor)
+                    {
+                        _appStateHandler.ShowColorPickerEditor();
+                    }
+                    else
+                    {
+                        _appStateHandler.ShowColorPicker();
+                    }
+                }
             }
         }
 
@@ -134,6 +158,29 @@ namespace ColorPicker.Keyboard
             {
                 currentlyPressedKeys.Add("Win");
             }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    _keyboardHook.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

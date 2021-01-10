@@ -5,18 +5,19 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.IO.Abstractions;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using Wox.Infrastructure;
-using Wox.Infrastructure.Logger;
 using Wox.Plugin;
+using Wox.Plugin.Logger;
 
 namespace Microsoft.Plugin.Folder
 {
     internal class ContextMenuLoader : IContextMenu
     {
+        private readonly IFileSystem _fileSystem = new FileSystem();
         private readonly PluginInitContext _context;
 
         public ContextMenuLoader(PluginInitContext context)
@@ -39,7 +40,7 @@ namespace Microsoft.Plugin.Folder
                 contextMenus.Add(new ContextMenuResult
                 {
                     PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                    Title = _context.API.GetTranslation("Microsoft_plugin_folder_copy_path"),
+                    Title = Properties.Resources.Microsoft_plugin_folder_copy_path,
                     Glyph = "\xE8C8",
                     FontFamily = "Segoe MDL2 Assets",
                     AcceleratorKey = Key.C,
@@ -53,8 +54,8 @@ namespace Microsoft.Plugin.Folder
                         }
                         catch (Exception e)
                         {
-                            var message = "Fail to set text in clipboard";
-                            LogException(message, e);
+                            var message = Properties.Resources.Microsoft_plugin_folder_clipboard_failed;
+                            Log.Exception(message, e, GetType());
                             _context.API.ShowMsg(message);
                             return false;
                         }
@@ -64,7 +65,7 @@ namespace Microsoft.Plugin.Folder
                 contextMenus.Add(new ContextMenuResult
                 {
                     PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                    Title = _context.API.GetTranslation("Microsoft_plugin_folder_open_in_console"),
+                    Title = Properties.Resources.Microsoft_plugin_folder_open_in_console,
                     Glyph = "\xE756",
                     FontFamily = "Segoe MDL2 Assets",
                     AcceleratorKey = Key.C,
@@ -76,7 +77,7 @@ namespace Microsoft.Plugin.Folder
                         {
                             if (record.Type == ResultType.File)
                             {
-                                Helper.OpenInConsole(Path.GetDirectoryName(record.FullPath));
+                                Helper.OpenInConsole(_fileSystem.Path.GetDirectoryName(record.FullPath));
                             }
                             else
                             {
@@ -87,7 +88,8 @@ namespace Microsoft.Plugin.Folder
                         }
                         catch (Exception e)
                         {
-                            Log.Exception($"|Microsoft.Plugin.Folder.ContextMenuLoader.LoadContextMenus| Failed to open {record.FullPath} in console, {e.Message}", e);
+                            Log.Exception($"Failed to open {record.FullPath} in console, {e.Message}", e, GetType());
+
                             return false;
                         }
                     },
@@ -103,7 +105,7 @@ namespace Microsoft.Plugin.Folder
             return new ContextMenuResult
             {
                 PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                Title = _context.API.GetTranslation("Microsoft_plugin_folder_open_containing_folder"),
+                Title = Properties.Resources.Microsoft_plugin_folder_open_containing_folder,
                 Glyph = "\xE838",
                 FontFamily = "Segoe MDL2 Assets",
                 AcceleratorKey = Key.E,
@@ -116,20 +118,16 @@ namespace Microsoft.Plugin.Folder
                     }
                     catch (Exception e)
                     {
-                        var message = $"Fail to open file at {record.FullPath}";
-                        LogException(message, e);
+                        var message = $"{Properties.Resources.Microsoft_plugin_folder_file_open_failed} {record.FullPath}";
+                        Log.Exception(message, e, GetType());
                         _context.API.ShowMsg(message);
+
                         return false;
                     }
 
                     return true;
                 },
             };
-        }
-
-        public static void LogException(string message, Exception e)
-        {
-            Log.Exception($"|Microsoft.Plugin.Folder.ContextMenu|{message}", e);
         }
     }
 
