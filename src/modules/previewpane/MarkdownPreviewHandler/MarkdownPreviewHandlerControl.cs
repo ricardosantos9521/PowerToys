@@ -4,36 +4,32 @@
 
 using System;
 using System.Drawing;
-using System.IO.Abstractions;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Common;
 using Markdig;
-using Microsoft.PowerToys.PreviewHandler.Markdown.Properties;
-using Microsoft.PowerToys.PreviewHandler.Markdown.Telemetry.Events;
+using MarkdownPreviewHandler.Properties;
+using MarkdownPreviewHandler.Telemetry.Events;
 using Microsoft.PowerToys.Telemetry;
 using PreviewHandlerCommon;
 
-namespace Microsoft.PowerToys.PreviewHandler.Markdown
+namespace MarkdownPreviewHandler
 {
     /// <summary>
     /// Win Form Implementation for Markdown Preview Handler.
     /// </summary>
     public class MarkdownPreviewHandlerControl : FormHandlerControl
     {
-        private static readonly IFileSystem FileSystem = new FileSystem();
-        private static readonly IPath Path = FileSystem.Path;
-        private static readonly IFile File = FileSystem.File;
-
         /// <summary>
         /// Extension to modify markdown AST.
         /// </summary>
-        private readonly HTMLParsingExtension _extension;
+        private readonly HTMLParsingExtension extension;
 
         /// <summary>
         /// Markdig Pipeline builder.
         /// </summary>
-        private readonly MarkdownPipelineBuilder _pipelineBuilder;
+        private readonly MarkdownPipelineBuilder pipelineBuilder;
 
         /// <summary>
         /// Markdown HTML header.
@@ -48,26 +44,26 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
         /// <summary>
         /// RichTextBox control to display if external images are blocked.
         /// </summary>
-        private RichTextBox _infoBar;
+        private RichTextBox infoBar;
 
         /// <summary>
         /// Extended Browser Control to display markdown html.
         /// </summary>
-        private WebBrowserExt _browser;
+        private WebBrowserExt browser;
 
         /// <summary>
         /// True if external image is blocked, false otherwise.
         /// </summary>
-        private bool _infoBarDisplayed;
+        private bool infoBarDisplayed = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MarkdownPreviewHandlerControl"/> class.
         /// </summary>
         public MarkdownPreviewHandlerControl()
         {
-            _extension = new HTMLParsingExtension(ImagesBlockedCallBack);
-            _pipelineBuilder = new MarkdownPipelineBuilder().UseAdvancedExtensions().UseEmojiAndSmiley().UseYamlFrontMatter().UseMathematics();
-            _pipelineBuilder.Extensions.Add(_extension);
+            this.extension = new HTMLParsingExtension(this.ImagesBlockedCallBack);
+            this.pipelineBuilder = new MarkdownPipelineBuilder().UseAdvancedExtensions().UseEmojiAndSmiley();
+            this.pipelineBuilder.Extensions.Add(this.extension);
         }
 
         /// <summary>
@@ -76,7 +72,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
         /// <param name="dataSource">Path to the file.</param>
         public override void DoPreview<T>(T dataSource)
         {
-            _infoBarDisplayed = false;
+            this.infoBarDisplayed = false;
 
             try
             {
@@ -89,17 +85,17 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
                 Regex imageTagRegex = new Regex(@"<[ ]*img.*>");
                 if (imageTagRegex.IsMatch(fileText))
                 {
-                    _infoBarDisplayed = true;
+                    this.infoBarDisplayed = true;
                 }
 
-                _extension.FilePath = Path.GetDirectoryName(filePath);
-                MarkdownPipeline pipeline = _pipelineBuilder.Build();
-                string parsedMarkdown = Markdig.Markdown.ToHtml(fileText, pipeline);
-                string markdownHTML = $"{htmlHeader}{parsedMarkdown}{htmlFooter}";
+                this.extension.BaseUrl = Path.GetDirectoryName(filePath);
+                MarkdownPipeline pipeline = this.pipelineBuilder.Build();
+                string parsedMarkdown = Markdown.ToHtml(fileText, pipeline);
+                string markdownHTML = $"{this.htmlHeader}{parsedMarkdown}{this.htmlFooter}";
 
-                InvokeOnControlThread(() =>
+                this.InvokeOnControlThread(() =>
                 {
-                    _browser = new WebBrowserExt
+                    this.browser = new WebBrowserExt
                     {
                         DocumentText = markdownHTML,
                         Dock = DockStyle.Fill,
@@ -108,31 +104,29 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
                         ScrollBarsEnabled = true,
                         AllowNavigation = false,
                     };
-                    Controls.Add(_browser);
+                    this.Controls.Add(this.browser);
 
-                    if (_infoBarDisplayed)
+                    if (this.infoBarDisplayed)
                     {
-                        _infoBar = GetTextBoxControl(Resources.BlockedImageInfoText);
-                        Resize += FormResized;
-                        Controls.Add(_infoBar);
+                        this.infoBar = this.GetTextBoxControl(Resources.BlockedImageInfoText);
+                        this.Resize += this.FormResized;
+                        this.Controls.Add(this.infoBar);
                     }
                 });
 
                 PowerToysTelemetry.Log.WriteEvent(new MarkdownFilePreviewed());
             }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
+            catch (Exception e)
             {
-                PowerToysTelemetry.Log.WriteEvent(new MarkdownFilePreviewError { Message = ex.Message });
+                PowerToysTelemetry.Log.WriteEvent(new MarkdownFilePreviewError { Message = e.Message });
 
-                InvokeOnControlThread(() =>
+                this.InvokeOnControlThread(() =>
                 {
-                    Controls.Clear();
-                    _infoBarDisplayed = true;
-                    _infoBar = GetTextBoxControl(Resources.MarkdownNotPreviewedError);
-                    Resize += FormResized;
-                    Controls.Add(_infoBar);
+                    this.Controls.Clear();
+                    this.infoBarDisplayed = true;
+                    this.infoBar = this.GetTextBoxControl(Resources.MarkdownNotPreviewedError);
+                    this.Resize += this.FormResized;
+                    this.Controls.Add(this.infoBar);
                 });
             }
             finally
@@ -156,7 +150,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
                 Dock = DockStyle.Top,
                 ReadOnly = true,
             };
-            richTextBox.ContentsResized += RTBContentsResized;
+            richTextBox.ContentsResized += this.RTBContentsResized;
             richTextBox.ScrollBars = RichTextBoxScrollBars.None;
             richTextBox.BorderStyle = BorderStyle.None;
 
@@ -181,9 +175,9 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
         /// <param name="e">Provides data for the event.</param>
         private void FormResized(object sender, EventArgs e)
         {
-            if (_infoBarDisplayed)
+            if (this.infoBarDisplayed)
             {
-                _infoBar.Width = Width;
+                this.infoBar.Width = this.Width;
             }
         }
 
@@ -192,7 +186,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
         /// </summary>
         private void ImagesBlockedCallBack()
         {
-            _infoBarDisplayed = true;
+            this.infoBarDisplayed = true;
         }
     }
 }

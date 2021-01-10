@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 
@@ -13,6 +14,9 @@ namespace FancyZonesEditor.Models
     //  Grid-styled Layout Model, which specifies rows, columns, percentage sizes, and row/column spans
     public class GridLayoutModel : LayoutModel
     {
+        // Localizable strings
+        private const string ErrorPersistingGridLayout = "Error persisting grid layout";
+
         // Non-localizable strings
         private const string ModelTypeID = "grid";
 
@@ -201,8 +205,6 @@ namespace FancyZonesEditor.Models
         // Implements the LayoutModel.PersistData abstract method
         protected override void PersistData()
         {
-            AddCustomLayout(this);
-
             GridLayoutInfo layoutInfo = new GridLayoutInfo
             {
                 Rows = Rows,
@@ -211,7 +213,6 @@ namespace FancyZonesEditor.Models
                 ColumnsPercentage = ColumnPercents,
                 CellChildMap = new int[Rows][],
             };
-
             for (int row = 0; row < Rows; row++)
             {
                 layoutInfo.CellChildMap[row] = new int[Columns];
@@ -223,7 +224,7 @@ namespace FancyZonesEditor.Models
 
             GridLayoutJson jsonObj = new GridLayoutJson
             {
-                Uuid = Uuid,
+                Uuid = "{" + Guid.ToString().ToUpper() + "}",
                 Name = Name,
                 Type = ModelTypeID,
                 Info = layoutInfo,
@@ -233,9 +234,15 @@ namespace FancyZonesEditor.Models
                 PropertyNamingPolicy = new DashCaseNamingPolicy(),
             };
 
-            string jsonString = JsonSerializer.Serialize(jsonObj, options);
-            AddCustomLayoutJson(JsonSerializer.Deserialize<JsonElement>(jsonString));
-            SerializeCreatedCustomZonesets();
+            try
+            {
+                string jsonString = JsonSerializer.Serialize(jsonObj, options);
+                File.WriteAllText(Settings.AppliedZoneSetTmpFile, jsonString);
+            }
+            catch (Exception ex)
+            {
+                ShowExceptionMessageBox(ErrorPersistingGridLayout, ex);
+            }
         }
     }
 }

@@ -47,7 +47,7 @@ namespace Common
         /// Gets the HWND of the control window.
         /// </summary>
         /// <returns>Pointer to the window handle.</returns>
-        IntPtr GetWindowHandle();
+        IntPtr GetHandle();
 
         /// <summary>
         /// Hide the preview and free any resource used for the preview.

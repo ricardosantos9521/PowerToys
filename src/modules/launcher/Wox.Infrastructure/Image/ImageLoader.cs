@@ -5,27 +5,19 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO.Abstractions;
+using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using ManagedCommon;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace Wox.Infrastructure.Image
 {
     public static class ImageLoader
     {
-        private static readonly IFileSystem FileSystem = new FileSystem();
-        private static readonly IPath Path = FileSystem.Path;
-        private static readonly IFile File = FileSystem.File;
-        private static readonly IDirectory Directory = FileSystem.Directory;
-
         private static readonly ImageCache ImageCache = new ImageCache();
         private static readonly ConcurrentDictionary<string, string> GuidToKey = new ConcurrentDictionary<string, string>();
 
@@ -70,8 +62,7 @@ namespace Wox.Infrastructure.Image
                         Load(x.Key);
                     });
                 });
-
-                Log.Info($"Number of preload images is <{ImageCache.Usage.Count}>, Images Number: {ImageCache.CacheSize()}, Unique Items {ImageCache.UniqueImagesInCache()}", MethodBase.GetCurrentMethod().DeclaringType);
+                Log.Info($"|ImageLoader.Initialize|Number of preload images is <{ImageCache.Usage.Count}>, Images Number: {ImageCache.CacheSize()}, Unique Items {ImageCache.UniqueImagesInCache()}");
             });
         }
 
@@ -119,7 +110,6 @@ namespace Wox.Infrastructure.Image
             Cache,
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing this to enable FxCop. We are logging the exception, and going forward general exceptions should not be caught")]
         private static ImageResult LoadInternal(string path, bool loadFullImage = false)
         {
             ImageSource image;
@@ -136,7 +126,6 @@ namespace Wox.Infrastructure.Image
                     return new ImageResult(ImageCache[path], ImageType.Cache);
                 }
 
-                // Using OrdinalIgnoreCase since this is internal and used with paths
                 if (path.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                 {
                     var imageSource = new BitmapImage(new Uri(path));
@@ -162,10 +151,7 @@ namespace Wox.Infrastructure.Image
                 }
                 else if (File.Exists(path))
                 {
-#pragma warning disable CA1308 // Normalize strings to uppercase. Reason: extension is used with the enum ImageExtensions, which contains all lowercase values
-                    // Using InvariantCulture since this is internal
-                    var extension = Path.GetExtension(path).ToLower(CultureInfo.InvariantCulture);
-#pragma warning restore CA1308 // Normalize strings to uppercase
+                    var extension = Path.GetExtension(path).ToLower();
                     if (ImageExtensions.Contains(extension))
                     {
                         type = ImageType.ImageFile;
@@ -202,7 +188,7 @@ namespace Wox.Infrastructure.Image
             }
             catch (System.Exception e)
             {
-                Log.Exception($"Failed to get thumbnail for {path}", e, MethodBase.GetCurrentMethod().DeclaringType);
+                Log.Exception($"|ImageLoader.Load|Failed to get thumbnail for {path}", e);
                 type = ImageType.Error;
                 image = ImageCache[ErrorIconPath];
                 ImageCache[path] = image;
@@ -211,7 +197,7 @@ namespace Wox.Infrastructure.Image
             return new ImageResult(image, type);
         }
 
-        private const bool _enableImageHash = true;
+        private static readonly bool _enableImageHash = true;
 
         public static ImageSource Load(string path, bool loadFullImage = false)
         {

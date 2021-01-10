@@ -106,15 +106,6 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Fallback encoder.
-        /// </summary>
-        public static string Advanced_FallbackEncoder_Name {
-            get {
-                return ResourceManager.GetString("Advanced_FallbackEncoder_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to File.
         /// </summary>
         public static string Advanced_File {
@@ -129,15 +120,6 @@ namespace ImageResizer.Properties {
         public static string Advanced_FileName {
             get {
                 return ResourceManager.GetString("Advanced_FileName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Filename.
-        /// </summary>
-        public static string Advanced_FileName_Name {
-            get {
-                return ResourceManager.GetString("Advanced_FileName_Name", resourceCulture);
             }
         }
         
@@ -214,15 +196,6 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to JPEG quality level.
-        /// </summary>
-        public static string Advanced_JpegQualityLevel_Name {
-            get {
-                return ResourceManager.GetString("Advanced_JpegQualityLevel_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to _Use original date modified.
         /// </summary>
         public static string Advanced_KeepDateModified {
@@ -237,15 +210,6 @@ namespace ImageResizer.Properties {
         public static string Advanced_PngInterlaceOption {
             get {
                 return ResourceManager.GetString("Advanced_PngInterlaceOption", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to PNG interlacing.
-        /// </summary>
-        public static string Advanced_PngInterlaceOption_Name {
-            get {
-                return ResourceManager.GetString("Advanced_PngInterlaceOption_Name", resourceCulture);
             }
         }
         
@@ -268,16 +232,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TIFF compression.
-        /// </summary>
-        public static string Advanced_TiffCompressOption_Name {
-            get {
-                return ResourceManager.GetString("Advanced_TiffCompressOption_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Settings.
+        ///   Looks up a localized string similar to Advanced Options.
         /// </summary>
         public static string Advanced_Title {
             get {
@@ -304,7 +259,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to © 2020 Brice Lambson. All rights reserved..
+        ///   Looks up a localized string similar to © 2019 Brice Lambson. All rights reserved..
         /// </summary>
         public static string Copyright {
             get {
@@ -313,16 +268,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Height.
-        /// </summary>
-        public static string Height {
-            get {
-                return ResourceManager.GetString("Height", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Image Resizer.
+        ///   Looks up a localized string similar to Image Resizer for Windows.
         /// </summary>
         public static string ImageResizer {
             get {
@@ -340,7 +286,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to _Select a size.
+        ///   Looks up a localized string similar to _Select a size..
         /// </summary>
         public static string Input_Content {
             get {
@@ -367,6 +313,15 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Resize your pictures.
+        /// </summary>
+        public static string Input_MainInstruction {
+            get {
+                return ResourceManager.GetString("Input_MainInstruction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to R_esize the original pictures (don&apos;t create copies).
         /// </summary>
         public static string Input_Replace {
@@ -376,7 +331,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Resize.
+        ///   Looks up a localized string similar to _Resize.
         /// </summary>
         public static string Input_Resize {
             get {
@@ -385,7 +340,7 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Settings.
+        ///   Looks up a localized string similar to Advanced options....
         /// </summary>
         public static string Input_ShowAdvanced {
             get {
@@ -426,15 +381,6 @@ namespace ImageResizer.Properties {
         public static string OK {
             get {
                 return ResourceManager.GetString("OK", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Apply settings.
-        /// </summary>
-        public static string OK_Tooltip {
-            get {
-                return ResourceManager.GetString("OK_Tooltip", resourceCulture);
             }
         }
         
@@ -588,24 +534,6 @@ namespace ImageResizer.Properties {
         public static string Progress_TimeRemaining_Seconds {
             get {
                 return ResourceManager.GetString("Progress_TimeRemaining_Seconds", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Resize pictures.
-        /// </summary>
-        public static string Resize_Tooltip {
-            get {
-                return ResourceManager.GetString("Resize_Tooltip", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Resize type.
-        /// </summary>
-        public static string Resize_Type {
-            get {
-                return ResourceManager.GetString("Resize_Type", resourceCulture);
             }
         }
         
@@ -781,29 +709,11 @@ namespace ImageResizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ZIP.
+        ///   Looks up a localized string similar to Zip.
         /// </summary>
         public static string TiffCompressOption_Zip {
             get {
                 return ResourceManager.GetString("TiffCompressOption_Zip", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Times Symbol.
-        /// </summary>
-        public static string Times_Symbol {
-            get {
-                return ResourceManager.GetString("Times_Symbol", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Unit.
-        /// </summary>
-        public static string Unit {
-            get {
-                return ResourceManager.GetString("Unit", resourceCulture);
             }
         }
         
@@ -822,15 +732,6 @@ namespace ImageResizer.Properties {
         public static string Version {
             get {
                 return ResourceManager.GetString("Version", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Width.
-        /// </summary>
-        public static string Width {
-            get {
-                return ResourceManager.GetString("Width", resourceCulture);
             }
         }
     }

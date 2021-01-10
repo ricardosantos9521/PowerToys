@@ -7,7 +7,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Media;
-using Wox.Plugin;
 
 namespace Wox.Infrastructure.Image
 {
@@ -19,7 +18,7 @@ namespace Wox.Infrastructure.Image
 
         private readonly ConcurrentDictionary<string, ImageSource> _data = new ConcurrentDictionary<string, ImageSource>();
 
-        public ConcurrentDictionary<string, int> Usage { get; private set; } = new ConcurrentDictionary<string, int>();
+        public ConcurrentDictionary<string, int> Usage { get; set; } = new ConcurrentDictionary<string, int>();
 
         public ImageSource this[string path]
         {
@@ -44,8 +43,7 @@ namespace Wox.Infrastructure.Image
                     // To delete the images from the data dictionary based on the resizing of the Usage Dictionary.
                     foreach (var key in _data.Keys)
                     {
-                        // Using Ordinal since this is internal
-                        if (!Usage.TryGetValue(key, out _) && !(key.Equals(Constant.ErrorIcon, StringComparison.Ordinal) || key.Equals(Constant.DefaultIcon, StringComparison.Ordinal) || key.Equals(Constant.LightThemedErrorIcon, StringComparison.Ordinal) || key.Equals(Constant.LightThemedDefaultIcon, StringComparison.Ordinal)))
+                        if (!Usage.TryGetValue(key, out _) && !(key.Equals(Constant.ErrorIcon) || key.Equals(Constant.DefaultIcon) || key.Equals(Constant.LightThemedErrorIcon) || key.Equals(Constant.LightThemedDefaultIcon)))
                         {
                             _data.TryRemove(key, out _);
                         }

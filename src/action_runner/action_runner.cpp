@@ -1,20 +1,13 @@
 #define WIN32_LEAN_AND_MEAN
-#include "Generated Files/resource.h"
-
 #include <Windows.h>
 #include <shellapi.h>
 
-#include <filesystem>
 #include <string_view>
 
+#include <common/common.h>
 #include <common/updating/updating.h>
-#include <common/updating/installer.h>
 #include <common/updating/http_client.h>
 #include <common/updating/dotnet_installation.h>
-
-#include <common/utils/elevation.h>
-#include <common/utils/process_path.h>
-#include <common/utils/resources.h>
 
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Storage.h>
@@ -23,7 +16,9 @@
 #include "../runner/tray_icon.h"
 #include "../runner/action_runner_utils.h"
 
-auto Strings = create_notifications_strings();
+#include "resource.h"
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 int uninstall_msi_action()
 {
@@ -32,7 +27,7 @@ int uninstall_msi_action()
     {
         return 0;
     }
-    if (!updating::uninstall_msi_version(package_path, Strings))
+    if (!updating::uninstall_msi_version(package_path))
     {
         return -1;
     }
@@ -173,7 +168,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
     std::wstring_view action{ args[1] };
 
-    if (action == RUN_NONELEVATED_CMDARG)
+    if (action == L"-run-non-elevated")
     {
         int nextArg = 2;
 
@@ -195,8 +190,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
             else
             {
-                params += args[nextArg];
-                params += L' ';
+                params = args[nextArg];
                 nextArg++;
             }
         }
@@ -235,7 +229,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
         }
     }
-    else if (action == UNINSTALL_MSI_CMDARG)
+    else if (action == L"-install_dotnet")
+    {
+        if (updating::dotnet_is_installed())
+        {
+            return 0;
+        }
+        const bool success = updating::install_dotnet();
+
+        MessageBoxW(nullptr,
+                    GET_RESOURCE_STRING(IDS_DOTNET_CORE_DOWNLOAD_FAILURE).c_str(),
+                    GET_RESOURCE_STRING(IDS_DOTNET_CORE_DOWNLOAD_FAILURE_TITLE).c_str(),
+                    MB_OK | MB_ICONERROR);
+
+        return !success;
+    }
+    else if (action == L"-uninstall_msi")
     {
         return uninstall_msi_action();
     }

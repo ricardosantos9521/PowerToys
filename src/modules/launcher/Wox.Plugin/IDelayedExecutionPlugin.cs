@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Wox.Plugin
 {
-    public interface IDelayedExecutionPlugin
+    public interface IDelayedExecutionPlugin : IFeatures
     {
         List<Result> Query(Query query, bool delayedExecution);
     }

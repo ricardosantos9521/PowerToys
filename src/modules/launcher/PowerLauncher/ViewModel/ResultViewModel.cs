@@ -7,10 +7,10 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media;
 using PowerLauncher.Helper;
-using PowerLauncher.Plugin;
+using Wox.Core.Plugin;
 using Wox.Infrastructure.Image;
+using Wox.Infrastructure.Logger;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace PowerLauncher.ViewModel
 {
@@ -189,7 +189,7 @@ namespace PowerLauncher.ViewModel
                     catch (Exception e)
 #pragma warning restore CA1031 // Do not catch general exception types
                     {
-                        Log.Exception($"IcoPath is empty and exception when calling Icon() for result <{Result.Title}> of plugin <{Result.PluginDirectory}>", e, GetType());
+                        Log.Exception($"|ResultViewModel.Image|IcoPath is empty and exception when calling Icon() for result <{Result.Title}> of plugin <{Result.PluginDirectory}>", e);
                         imagePath = ImageLoader.ErrorIconPath;
                     }
                 }
@@ -270,14 +270,10 @@ namespace PowerLauncher.ViewModel
             return Result.GetHashCode();
         }
 
-        public string SearchBoxDisplayText()
-        {
-            return Result.QueryTextDisplay;
-        }
-
         public override string ToString()
         {
-            return Result.ToString();
+            var display = string.IsNullOrEmpty(Result.QueryTextDisplay) ? Result.Title : Result.QueryTextDisplay;
+            return display;
         }
     }
 }

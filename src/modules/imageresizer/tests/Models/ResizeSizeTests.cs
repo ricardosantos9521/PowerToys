@@ -7,13 +7,14 @@ using System.ComponentModel;
 using ImageResizer.Properties;
 using ImageResizer.Test;
 using Xunit;
+using Xunit.Extensions;
 
 namespace ImageResizer.Models
 {
     public class ResizeSizeTests
     {
         [Fact]
-        public void NameWorks()
+        public void Name_works()
         {
             var size = new ResizeSize();
 
@@ -27,7 +28,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void NameReplacesTokens()
+        public void Name_replaces_tokens()
         {
             var args = new List<(string, string)>
             {
@@ -38,17 +39,16 @@ namespace ImageResizer.Models
             };
             foreach (var (name, expected) in args)
             {
-                var size = new ResizeSize
-                {
-                    Name = name,
-                };
+                var size = new ResizeSize();
+
+                size.Name = name;
 
                 Assert.Equal(expected, size.Name);
             }
         }
 
         [Fact]
-        public void FitWorks()
+        public void Fit_works()
         {
             var size = new ResizeSize();
 
@@ -62,7 +62,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void WidthWorks()
+        public void Width_works()
         {
             var size = new ResizeSize();
 
@@ -76,7 +76,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HeightWorks()
+        public void Height_works()
         {
             var size = new ResizeSize();
 
@@ -90,7 +90,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsTrueWhenWidthUnset()
+        public void HasAuto_returns_true_when_Width_unset()
         {
             var size = new ResizeSize
             {
@@ -102,7 +102,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsTrueWhenHeightUnset()
+        public void HasAuto_returns_true_when_Height_unset()
         {
             var size = new ResizeSize
             {
@@ -114,7 +114,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void HasAutoReturnsFalseWhenWidthAndHeightSet()
+        public void HasAuto_returns_false_when_Width_and_Height_set()
         {
             var size = new ResizeSize
             {
@@ -126,7 +126,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void UnitWorks()
+        public void Unit_works()
         {
             var size = new ResizeSize();
 
@@ -140,7 +140,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetPixelWidthWorks()
+        public void GetPixelWidth_works()
         {
             var size = new ResizeSize
             {
@@ -154,7 +154,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void GetPixelHeightWorks()
+        public void GetPixelHeight_works()
         {
             var size = new ResizeSize
             {
@@ -170,7 +170,7 @@ namespace ImageResizer.Models
         [Theory]
         [InlineData(ResizeFit.Fit)]
         [InlineData(ResizeFit.Fill)]
-        public void GetPixelHeightUsesWidthWhenScaleByPercent(ResizeFit fit)
+        public void GetPixelHeight_uses_Width_when_scale_by_percent(ResizeFit fit)
         {
             var size = new ResizeSize
             {
@@ -186,7 +186,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenAutoAndFit()
+        public void ConvertToPixels_works_when_auto_and_fit()
         {
             var size = new ResizeSize
             {
@@ -200,7 +200,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenAutoAndNotFit()
+        public void ConvertToPixels_works_when_auto_and_not_fit()
         {
             var size = new ResizeSize
             {
@@ -214,7 +214,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenInches()
+        public void ConvertToPixels_works_when_inches()
         {
             var size = new ResizeSize
             {
@@ -228,7 +228,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenCentimeters()
+        public void ConvertToPixels_works_when_centimeters()
         {
             var size = new ResizeSize
             {
@@ -242,7 +242,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenPercent()
+        public void ConvertToPixels_works_when_percent()
         {
             var size = new ResizeSize
             {
@@ -256,7 +256,7 @@ namespace ImageResizer.Models
         }
 
         [Fact]
-        public void ConvertToPixelsWorksWhenPixels()
+        public void ConvertToPixels_works_when_pixels()
         {
             var size = new ResizeSize
             {
@@ -267,42 +267,6 @@ namespace ImageResizer.Models
             var result = size.GetPixelWidth(100, 96);
 
             Assert.Equal(50, result);
-        }
-
-        [Theory]
-        [InlineData(ResizeFit.Fill, ResizeUnit.Centimeter)]
-        [InlineData(ResizeFit.Fill, ResizeUnit.Inch)]
-        [InlineData(ResizeFit.Fill, ResizeUnit.Pixel)]
-        [InlineData(ResizeFit.Fit, ResizeUnit.Centimeter)]
-        [InlineData(ResizeFit.Fit, ResizeUnit.Inch)]
-        [InlineData(ResizeFit.Fit, ResizeUnit.Pixel)]
-        [InlineData(ResizeFit.Stretch, ResizeUnit.Centimeter)]
-        [InlineData(ResizeFit.Stretch, ResizeUnit.Inch)]
-        [InlineData(ResizeFit.Stretch, ResizeUnit.Percent)]
-        [InlineData(ResizeFit.Stretch, ResizeUnit.Pixel)]
-        public void HeightVisible(ResizeFit fit, ResizeUnit unit)
-        {
-            var size = new ResizeSize
-            {
-                Fit = fit,
-                Unit = unit,
-            };
-
-            Assert.True(size.ShowHeight);
-        }
-
-        [Theory]
-        [InlineData(ResizeFit.Fill, ResizeUnit.Percent)]
-        [InlineData(ResizeFit.Fit, ResizeUnit.Percent)]
-        public void HeightNotVisible(ResizeFit fit, ResizeUnit unit)
-        {
-            var size = new ResizeSize
-            {
-                Fit = fit,
-                Unit = unit,
-            };
-
-            Assert.False(size.ShowHeight);
         }
     }
 }

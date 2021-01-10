@@ -3,9 +3,7 @@
 // See the LICENSE file in the project root for more information.  Code forked from Brice Lambson's https://github.com/bricelam/ImageResizer/
 
 using System;
-using System.Globalization;
 using System.IO;
-using System.IO.Abstractions;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -13,14 +11,11 @@ using System.Windows.Media.Imaging;
 using ImageResizer.Properties;
 using ImageResizer.Utilities;
 using Microsoft.VisualBasic.FileIO;
-using FileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
 
 namespace ImageResizer.Models
 {
     internal class ResizeOperation
     {
-        private readonly IFileSystem _fileSystem = new System.IO.Abstractions.FileSystem();
-
         private readonly string _file;
         private readonly string _destinationDirectory;
         private readonly Settings _settings;
@@ -35,7 +30,7 @@ namespace ImageResizer.Models
         public void Execute()
         {
             string path;
-            using (var inputStream = _fileSystem.File.OpenRead(_file))
+            using (var inputStream = File.OpenRead(_file))
             {
                 var decoder = BitmapDecoder.Create(
                     inputStream,
@@ -68,31 +63,17 @@ namespace ImageResizer.Models
 
                 foreach (var originalFrame in decoder.Frames)
                 {
-                    BitmapMetadata metadata = (BitmapMetadata)originalFrame.Metadata;
-                    if (metadata != null)
-                    {
-                        try
-                        {
-                            // Detect whether metadata can copied successfully
-                            _ = metadata.Clone();
-                        }
-                        catch (ArgumentException)
-                        {
-                            metadata = null;
-                        }
-                    }
-
                     encoder.Frames.Add(
                         BitmapFrame.Create(
                             Transform(originalFrame),
                             thumbnail: null,
-                            metadata, // TODO: Add an option to strip any metadata that doesn't affect rendering (issue #3)
+                            (BitmapMetadata)originalFrame.Metadata, // TODO: Add an option to strip any metadata that doesn't affect rendering (issue #3)
                             colorContexts: null));
                 }
 
                 path = GetDestinationPath(encoder);
-                _fileSystem.Directory.CreateDirectory(_fileSystem.Path.GetDirectoryName(path));
-                using (var outputStream = _fileSystem.File.Open(path, FileMode.CreateNew, FileAccess.Write))
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                using (var outputStream = File.Open(path, FileMode.CreateNew, FileAccess.Write))
                 {
                     encoder.Save(outputStream);
                 }
@@ -100,13 +81,13 @@ namespace ImageResizer.Models
 
             if (_settings.KeepDateModified)
             {
-                _fileSystem.File.SetLastWriteTimeUtc(path, _fileSystem.File.GetLastWriteTimeUtc(_file));
+                File.SetLastWriteTimeUtc(path, File.GetLastWriteTimeUtc(_file));
             }
 
             if (_settings.Replace)
             {
                 var backup = GetBackupPath();
-                _fileSystem.File.Replace(path, _file, backup, ignoreMetadataErrors: true);
+                File.Replace(path, _file, backup, ignoreMetadataErrors: true);
                 FileSystem.DeleteFile(backup, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
             }
         }
@@ -183,19 +164,17 @@ namespace ImageResizer.Models
 
         private string GetDestinationPath(BitmapEncoder encoder)
         {
-            var directory = _destinationDirectory ?? _fileSystem.Path.GetDirectoryName(_file);
-            var originalFileName = _fileSystem.Path.GetFileNameWithoutExtension(_file);
+            var directory = _destinationDirectory ?? Path.GetDirectoryName(_file);
+            var originalFileName = Path.GetFileNameWithoutExtension(_file);
 
             var supportedExtensions = encoder.CodecInfo.FileExtensions.Split(',');
-            var extension = _fileSystem.Path.GetExtension(_file);
+            var extension = Path.GetExtension(_file);
             if (!supportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
             {
                 extension = supportedExtensions.FirstOrDefault();
             }
 
-            // Using CurrentCulture since this is user facing
             var fileName = string.Format(
-                CultureInfo.CurrentCulture,
                 _settings.FileNameFormat,
                 originalFileName,
                 _settings.SelectedSize.Name,
@@ -203,11 +182,11 @@ namespace ImageResizer.Models
                 _settings.SelectedSize.Height,
                 encoder.Frames[0].PixelWidth,
                 encoder.Frames[0].PixelHeight);
-            var path = _fileSystem.Path.Combine(directory, fileName + extension);
+            var path = Path.Combine(directory, fileName + extension);
             var uniquifier = 1;
-            while (_fileSystem.File.Exists(path))
+            while (File.Exists(path))
             {
-                path = _fileSystem.Path.Combine(directory, fileName + " (" + uniquifier++ + ")" + extension);
+                path = Path.Combine(directory, fileName + " (" + uniquifier++ + ")" + extension);
             }
 
             return path;
@@ -215,15 +194,15 @@ namespace ImageResizer.Models
 
         private string GetBackupPath()
         {
-            var directory = _fileSystem.Path.GetDirectoryName(_file);
-            var fileName = _fileSystem.Path.GetFileNameWithoutExtension(_file);
-            var extension = _fileSystem.Path.GetExtension(_file);
+            var directory = Path.GetDirectoryName(_file);
+            var fileName = Path.GetFileNameWithoutExtension(_file);
+            var extension = Path.GetExtension(_file);
 
-            var path = _fileSystem.Path.Combine(directory, fileName + ".bak" + extension);
+            var path = Path.Combine(directory, fileName + ".bak" + extension);
             var uniquifier = 1;
-            while (_fileSystem.File.Exists(path))
+            while (File.Exists(path))
             {
-                path = _fileSystem.Path.Combine(directory, fileName + " (" + uniquifier++ + ")" + ".bak" + extension);
+                path = Path.Combine(directory, fileName + " (" + uniquifier++ + ")" + ".bak" + extension);
             }
 
             return path;

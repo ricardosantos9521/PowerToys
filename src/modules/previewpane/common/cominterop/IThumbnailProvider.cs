@@ -10,11 +10,10 @@ namespace Common.ComInterlop
     /// <summary>
     /// Specifies the alpha type of the image.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "Interop")]
     public enum WTS_ALPHATYPE : int
     {
         /// <summary>
-        /// The bitmap is an unknown format. The Shell tries nonetheless to detect whether the image has an alpha channel.
+        /// he bitmap is an unknown format. The Shell tries nonetheless to detect whether the image has an alpha channel.
         /// </summary>
         WTSAT_UNKNOWN = 0,
 

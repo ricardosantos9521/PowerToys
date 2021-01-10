@@ -1,8 +1,6 @@
 #pragma once
 
-#include <common/hooks/WinHookEvent.h>
-
-#include <functional>
+#include <common/WinHookEvent.h>
 
 interface IZoneWindow;
 interface IFancyZonesSettings;
@@ -104,4 +102,4 @@ interface __declspec(uuid("{5C8D99D6-34B2-4F4A-A8E5-7483F6869775}")) IZoneWindow
     () = 0;
 };
 
-winrt::com_ptr<IFancyZones> MakeFancyZones(HINSTANCE hinstance, const winrt::com_ptr<IFancyZonesSettings>& settings, std::function<void()> disableCallback) noexcept;
+winrt::com_ptr<IFancyZones> MakeFancyZones(HINSTANCE hinstance, const winrt::com_ptr<IFancyZonesSettings>& settings) noexcept;

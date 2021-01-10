@@ -7,20 +7,17 @@
 #include "trace.h"
 #include "general_settings.h"
 #include "restart_elevated.h"
-#include "RestartManagement.h"
-#include "Generated files/resource.h"
+#include "resource.h"
 
-#include <common/comUtils/comUtils.h>
-#include <common/display/dpi_aware.h>
-#include <common/notifications/notifications.h>
-#include <common/notifications/dont_show_again.h>
-#include <common/updating/installer.h>
+#include <common/common.h>
+#include <common/dpi_aware.h>
+#include <common/winstore.h>
+#include <common/notifications.h>
 #include <common/updating/updating.h>
-#include <common/utils/appMutex.h>
-#include <common/utils/elevation.h>
-#include <common/utils/processApi.h>
-#include <common/utils/resources.h>
-#include <common/winstore/winstore.h>
+#include <common/RestartManagement.h>
+#include <common/appMutex.h>
+#include <common/processApi.h>
+#include <common/comUtils.h>
 
 #include "update_state.h"
 #include "update_utils.h"
@@ -30,23 +27,25 @@
 
 #include <Psapi.h>
 #include <RestartManager.h>
-#include "centralized_kb_hook.h"
 
 #if _DEBUG && _WIN64
 #include "unhandled_exception_handler.h"
 #endif
-#include <common/SettingsAPI/settings_helpers.h>
-#include <common/logger/logger.h>
-#include <common/utils/winapi_error.h>
-#include <common/version/version.h>
-#include <common/utils/window.h>
+#include <common/notifications/fancyzones_notifications.h>
 
-extern updating::notifications::strings Strings;
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+
+namespace localized_strings
+{
+    const wchar_t MSI_VERSION_IS_ALREADY_RUNNING[] = L"An older version of PowerToys is already running.";
+    const wchar_t DOWNLOAD_UPDATE_ERROR[] = L"Couldn't download PowerToys update! Please report the issue on Github.";
+    const wchar_t OLDER_MSIX_UNINSTALLED[] = L"An older MSIX version of PowerToys was uninstalled.";
+    const wchar_t PT_UPDATE_MESSAGE_BOX_TEXT[] = L"PowerToys was updated successfully!";
+}
 
 namespace
 {
     const wchar_t PT_URI_PROTOCOL_SCHEME[] = L"powertoys://";
-    const wchar_t POWER_TOYS_MODULE_LOAD_FAIL[] = L"Failed to load "; // Module name will be appended on this message and it is not localized.
 }
 
 void chdir_current_executable()
@@ -57,7 +56,7 @@ void chdir_current_executable()
     PathRemoveFileSpec(executable_path);
     if (!SetCurrentDirectory(executable_path))
     {
-        show_last_error_message(L"Change Directory to Executable Path", GetLastError(), L"PowerToys - runner");
+        show_last_error_message(L"Change Directory to Executable Path", GetLastError());
     }
 }
 
@@ -79,11 +78,6 @@ void open_menu_from_another_instance()
 
 int runner(bool isProcessElevated)
 {
-    std::filesystem::path logFilePath(PTSettingsHelper::get_root_save_folder_location());
-    logFilePath.append(LogSettings::runnerLogPath);
-    Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
-
-    Logger::info("Runner is starting. Elevated={}", isProcessElevated);
     DPIAware::EnableDPIAwarenessForThisProcess();
 
 #if _DEBUG && _WIN64
@@ -93,7 +87,6 @@ int runner(bool isProcessElevated)
 #endif
     Trace::RegisterProvider();
     start_tray_icon();
-    CentralizedKeyboardHook::Start();
 
     int result = -1;
     try
@@ -113,7 +106,7 @@ int runner(bool isProcessElevated)
             std::thread{ [] {
                 if (updating::uninstall_previous_msix_version_async().get())
                 {
-                    notifications::show_toast(GET_RESOURCE_STRING(IDS_OLDER_MSIX_UNINSTALLED).c_str(), L"PowerToys");
+                    notifications::show_toast(localized_strings::OLDER_MSIX_UNINSTALLED, L"PowerToys");
                 }
             } }.detach();
         }
@@ -138,17 +131,11 @@ int runner(bool isProcessElevated)
         {
             try
             {
-                auto pt_module = load_powertoy(moduleSubdir);
-                modules().emplace(pt_module->get_key(), std::move(pt_module));
+                auto module = load_powertoy(moduleSubdir);
+                modules().emplace(module->get_name(), std::move(module));
             }
             catch (...)
             {
-                std::wstring errorMessage = POWER_TOYS_MODULE_LOAD_FAIL;
-                errorMessage += moduleSubdir;
-                MessageBoxW(NULL,
-                            errorMessage.c_str(),
-                            L"PowerToys",
-                            MB_OK | MB_ICONERROR);
             }
         }
         // Start initial powertoys
@@ -214,15 +201,13 @@ enum class toast_notification_handler_result
 toast_notification_handler_result toast_notification_handler(const std::wstring_view param)
 {
     const std::wstring_view cant_drag_elevated_disable = L"cant_drag_elevated_disable/";
-    const std::wstring_view couldnt_toggle_powerpreview_modules_disable = L"couldnt_toggle_powerpreview_modules_disable/";
-    const std::wstring_view download_and_install_update = L"download_and_install_update/";
-    const std::wstring_view open_settings = L"open_settings/";
-    const std::wstring_view schedule_update = L"schedule_update/";
     const std::wstring_view update_now = L"update_now/";
+    const std::wstring_view schedule_update = L"schedule_update/";
+    const std::wstring_view download_and_install_update = L"download_and_install_update/";
 
     if (param == cant_drag_elevated_disable)
     {
-        return notifications::disable_toast(notifications::CantDragElevatedDontShowAgainRegistryPath) ? toast_notification_handler_result::exit_success : toast_notification_handler_result::exit_error;
+        return disable_cant_drag_elevated_warning() ? toast_notification_handler_result::exit_success : toast_notification_handler_result::exit_error;
     }
     else if (param.starts_with(update_now))
     {
@@ -247,7 +232,7 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     {
         try
         {
-            std::wstring installer_filename = updating::download_update(Strings).get();
+            std::wstring installer_filename = updating::download_update().get();
 
             std::wstring args{ UPDATE_NOW_LAUNCH_STAGE1_CMDARG };
             args += L' ';
@@ -259,21 +244,12 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
         catch (...)
         {
             MessageBoxW(nullptr,
-                        GET_RESOURCE_STRING(IDS_DOWNLOAD_UPDATE_ERROR).c_str(),
+                        localized_strings::DOWNLOAD_UPDATE_ERROR,
                         L"PowerToys",
                         MB_ICONWARNING | MB_OK);
 
             return toast_notification_handler_result::exit_error;
         }
-    }
-    else if (param == couldnt_toggle_powerpreview_modules_disable)
-    {
-        return notifications::disable_toast(notifications::PreviewModulesDontShowAgainRegistryPath) ? toast_notification_handler_result::exit_success : toast_notification_handler_result::exit_error;
-    }
-    else if (param == open_settings)
-    {
-        open_menu_from_another_instance();
-        return toast_notification_handler_result::exit_success;
     }
     else
     {
@@ -301,7 +277,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     {
         return 0;
     }
-
     int n_cmd_args = 0;
     LPWSTR* cmd_arg_list = CommandLineToArgvW(GetCommandLineW(), &n_cmd_args);
     switch (should_run_in_special_mode(n_cmd_args, cmd_arg_list))
@@ -317,14 +292,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             return 0;
         }
     case SpecialMode::ReportSuccessfulUpdate:
-    {
-        notifications::remove_toasts_by_tag(notifications::UPDATING_PROCESS_TOAST_TAG);
-        notifications::remove_all_scheduled_toasts();
-        notifications::show_toast(GET_RESOURCE_STRING(IDS_PT_UPDATE_MESSAGE_BOX_TEXT),
-                                  L"PowerToys",
-                                  notifications::toast_params{ notifications::UPDATING_PROCESS_TOAST_TAG });
+        notifications::show_toast(localized_strings::PT_UPDATE_MESSAGE_BOX_TEXT, L"PowerToys");
         break;
-    }
 
     case SpecialMode::None:
         // continue as usual

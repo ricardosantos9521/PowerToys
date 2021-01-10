@@ -20,3 +20,4 @@
 
 #include <ProjectTelemetry.h>
 
+#pragma comment(lib, "windowsapp")

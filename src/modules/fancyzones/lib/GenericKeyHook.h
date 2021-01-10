@@ -2,7 +2,6 @@
 
 #include "pch.h"
 #include <functional>
-#include <common/debug_control.h>
 
 template<int... keys>
 class GenericKeyHook
@@ -39,7 +38,7 @@ public:
     }
 
 private:
-    inline static HHOOK hHook = nullptr;
+    inline static HHOOK hHook;
     inline static std::function<void(bool)> callback;
 
     static LRESULT CALLBACK GenericKeyHookProc(int nCode, WPARAM wParam, LPARAM lParam)

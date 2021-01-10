@@ -1,99 +1,15 @@
 ﻿#include "pch.h"
 #include "overlay_window.h"
-#include <common/display/monitors.h>
-#include "tasklist_positions.h"
-#include "start_visible.h"
-#include <common/utils/resources.h>
-#include <common/utils/window.h>
-
+#include "common/monitors.h"
+#include "common/tasklist_positions.h"
+#include "common/start_visible.h"
 #include "keyboard_state.h"
 #include "shortcut_guide.h"
 #include "trace.h"
 #include "Generated Files/resource.h"
+#include <common/common.h>
 
-namespace
-{
-    // Gets position of given window.
-    std::optional<RECT> get_window_pos(HWND hwnd)
-    {
-        RECT window;
-        if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &window, sizeof(window)) == S_OK)
-        {
-            return window;
-        }
-        else
-        {
-            return {};
-        }
-    }
-
-    enum WindowState
-    {
-        UNKNOWN,
-        MINIMIZED,
-        MAXIMIZED,
-        SNAPED_TOP_LEFT,
-        SNAPED_LEFT,
-        SNAPED_BOTTOM_LEFT,
-        SNAPED_TOP_RIGHT,
-        SNAPED_RIGHT,
-        SNAPED_BOTTOM_RIGHT,
-        RESTORED
-    };
-
-    inline WindowState get_window_state(HWND hwnd)
-    {
-        WINDOWPLACEMENT placement;
-        placement.length = sizeof(WINDOWPLACEMENT);
-
-        if (GetWindowPlacement(hwnd, &placement) == 0)
-        {
-            return UNKNOWN;
-        }
-
-        if (placement.showCmd == SW_MINIMIZE || placement.showCmd == SW_SHOWMINIMIZED || IsIconic(hwnd))
-        {
-            return MINIMIZED;
-        }
-
-        if (placement.showCmd == SW_MAXIMIZE || placement.showCmd == SW_SHOWMAXIMIZED)
-        {
-            return MAXIMIZED;
-        }
-
-        auto rectp = get_window_pos(hwnd);
-        if (!rectp)
-        {
-            return UNKNOWN;
-        }
-
-        auto rect = *rectp;
-        MONITORINFO monitor;
-        monitor.cbSize = sizeof(MONITORINFO);
-        auto h_monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-        GetMonitorInfo(h_monitor, &monitor);
-        bool top_left = monitor.rcWork.top == rect.top && monitor.rcWork.left == rect.left;
-        bool bottom_left = monitor.rcWork.bottom == rect.bottom && monitor.rcWork.left == rect.left;
-        bool top_right = monitor.rcWork.top == rect.top && monitor.rcWork.right == rect.right;
-        bool bottom_right = monitor.rcWork.bottom == rect.bottom && monitor.rcWork.right == rect.right;
-
-        if (top_left && bottom_left)
-            return SNAPED_LEFT;
-        if (top_left)
-            return SNAPED_TOP_LEFT;
-        if (bottom_left)
-            return SNAPED_BOTTOM_LEFT;
-        if (top_right && bottom_right)
-            return SNAPED_RIGHT;
-        if (top_right)
-            return SNAPED_TOP_RIGHT;
-        if (bottom_right)
-            return SNAPED_BOTTOM_RIGHT;
-
-        return RESTORED;
-    }
-
-}
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 D2DOverlaySVG& D2DOverlaySVG::load(const std::wstring& filename, ID2D1DeviceContext5* d2d_dc)
 {
@@ -155,7 +71,7 @@ ScaleResult D2DOverlaySVG::get_thumbnail_rect_and_scale(int x_offset, int y_offs
     }
     float scale_h = fill * thumbnail_scaled_rect_width / window_cx;
     float scale_v = fill * thumbnail_scaled_rect_heigh / window_cy;
-    float use_scale = std::min(scale_h, scale_v);
+    float use_scale = min(scale_h, scale_v);
     RECT thumb_rect;
     thumb_rect.left = thumbnail_scaled_rect.left + (int)(thumbnail_scaled_rect_width - use_scale * window_cx) / 2 + x_offset;
     thumb_rect.right = thumbnail_scaled_rect.right - (int)(thumbnail_scaled_rect_width - use_scale * window_cx) / 2 + x_offset;
@@ -338,10 +254,10 @@ void D2DOverlayWindow::show(HWND active_window, bool snappable)
     total_screen = ScreenSize(monitors[0].rect);
     for (auto& monitor : monitors)
     {
-        total_screen.rect.left = std::min(total_screen.rect.left, monitor.rect.left);
-        total_screen.rect.top = std::min(total_screen.rect.top, monitor.rect.top);
-        total_screen.rect.right = std::max(total_screen.rect.right, monitor.rect.right);
-        total_screen.rect.bottom = std::max(total_screen.rect.bottom, monitor.rect.bottom);
+        total_screen.rect.left = min(total_screen.rect.left, monitor.rect.left);
+        total_screen.rect.top = min(total_screen.rect.top, monitor.rect.top);
+        total_screen.rect.right = max(total_screen.rect.right, monitor.rect.right);
+        total_screen.rect.bottom = max(total_screen.rect.bottom, monitor.rect.bottom);
     }
     // make sure top-right corner of all the monitor rects is (0,0)
     monitor_dx = -total_screen.left();
@@ -777,10 +693,10 @@ void D2DOverlayWindow::render(ID2D1DeviceContext5* d2d_dc)
     auto total_monitor_with_screen = total_screen;
     if (thumb_window)
     {
-        total_monitor_with_screen.rect.left = std::min(total_monitor_with_screen.rect.left, thumb_window->left + monitor_dx);
-        total_monitor_with_screen.rect.top = std::min(total_monitor_with_screen.rect.top, thumb_window->top + monitor_dy);
-        total_monitor_with_screen.rect.right = std::max(total_monitor_with_screen.rect.right, thumb_window->right + monitor_dx);
-        total_monitor_with_screen.rect.bottom = std::max(total_monitor_with_screen.rect.bottom, thumb_window->bottom + monitor_dy);
+        total_monitor_with_screen.rect.left = min(total_monitor_with_screen.rect.left, thumb_window->left + monitor_dx);
+        total_monitor_with_screen.rect.top = min(total_monitor_with_screen.rect.top, thumb_window->top + monitor_dy);
+        total_monitor_with_screen.rect.right = max(total_monitor_with_screen.rect.right, thumb_window->right + monitor_dx);
+        total_monitor_with_screen.rect.bottom = max(total_monitor_with_screen.rect.bottom, thumb_window->bottom + monitor_dy);
     }
     // Only allow the new rect being slight bigger.
     if (total_monitor_with_screen.width() - total_screen.width() > (thumb_window->right - thumb_window->left) / 2 ||

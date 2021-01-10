@@ -4,7 +4,7 @@
 #include <keyboardmanager/common/KeyboardManagerState.h>
 #include <keyboardmanager/dll/KeyboardEventHandlers.h>
 #include "TestHelpers.h"
-#include <common/interop/shared_constants.h>
+#include "../common/shared_constants.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -58,8 +58,8 @@ namespace RemappingLogicTests
         // Test if key is suppressed if a key is disabled by single key remap
         TEST_METHOD (RemappedKeyDisabled_ShouldNotChangeKeyState_OnKeyEvent)
         {
-            // Remap A to VK_DISABLE (disabled)
-            testState.AddSingleKeyRemap(0x41, CommonSharedConstants::VK_DISABLED);
+            // Remap A to 0x0 (disabled)
+            testState.AddSingleKeyRemap(0x41, 0x0);
             const int nInputs = 1;
 
             INPUT input[nInputs] = {};

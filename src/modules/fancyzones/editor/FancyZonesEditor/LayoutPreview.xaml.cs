@@ -1,8 +1,7 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -29,28 +28,23 @@ namespace FancyZonesEditor
         private LayoutModel _model;
         private List<Int32Rect> _zones = new List<Int32Rect>();
 
-        public bool IsActualSize
-        {
-            get { return (bool)GetValue(IsActualSizeProperty); }
-            set { SetValue(IsActualSizeProperty, value); }
-        }
-
         public LayoutPreview()
         {
             InitializeComponent();
             DataContextChanged += LayoutPreview_DataContextChanged;
-            ((App)Application.Current).MainWindowSettings.PropertyChanged += ZoneSettings_PropertyChanged;
-        }
-
-        public void UpdatePreview()
-        {
-            RenderPreview();
+            ((App)Application.Current).ZoneSettings.PropertyChanged += ZoneSettings_PropertyChanged;
         }
 
         private void LayoutPreview_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             _model = (LayoutModel)DataContext;
             RenderPreview();
+        }
+
+        public bool IsActualSize
+        {
+            get { return (bool)GetValue(IsActualSizeProperty); }
+            set { SetValue(IsActualSizeProperty, value); }
         }
 
         private void ZoneSettings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -114,25 +108,27 @@ namespace FancyZonesEditor
             RowColInfo[] colInfo = (from percent in grid.ColumnPercents
                                     select new RowColInfo(percent)).ToArray();
 
-            MainWindowSettingsModel settings = ((App)Application.Current).MainWindowSettings;
+            Settings settings = ((App)Application.Current).ZoneSettings;
 
             int spacing = settings.ShowSpacing ? settings.Spacing : 0;
 
-            var workArea = App.Overlay.WorkArea;
-            double width = workArea.Width - (spacing * (cols + 1));
-            double height = workArea.Height - (spacing * (rows + 1));
+            int width = (int)Settings.WorkArea.Width;
+            int height = (int)Settings.WorkArea.Height;
+
+            double totalWidth = width - (spacing * (cols + 1));
+            double totalHeight = height - (spacing * (rows + 1));
 
             double top = spacing;
             for (int row = 0; row < rows; row++)
             {
-                double cellHeight = rowInfo[row].Recalculate(top, height);
+                double cellHeight = rowInfo[row].Recalculate(top, totalHeight);
                 top += cellHeight + spacing;
             }
 
             double left = spacing;
             for (int col = 0; col < cols; col++)
             {
-                double cellWidth = colInfo[col].Recalculate(left, width);
+                double cellWidth = colInfo[col].Recalculate(left, totalWidth);
                 left += cellWidth + spacing;
             }
 
@@ -143,8 +139,8 @@ namespace FancyZonesEditor
             Body.Children.Add(viewbox);
             Canvas frame = new Canvas
             {
-                Width = workArea.Width,
-                Height = workArea.Height,
+                Width = width,
+                Height = height,
             };
             viewbox.Child = frame;
 
@@ -175,8 +171,8 @@ namespace FancyZonesEditor
                             maxCol++;
                         }
 
-                        rect.Width = Math.Max(0, colInfo[maxCol].End - left);
-                        rect.Height = Math.Max(0, rowInfo[maxRow].End - top);
+                        rect.Width = colInfo[maxCol].End - left;
+                        rect.Height = rowInfo[maxRow].End - top;
                         rect.StrokeThickness = 1;
                         rect.Stroke = Brushes.DarkGray;
                         rect.Fill = Brushes.LightGray;
@@ -185,14 +181,6 @@ namespace FancyZonesEditor
                             (int)left, (int)top, (int)rect.Width, (int)rect.Height));
                     }
                 }
-            }
-
-            if (App.DebugMode)
-            {
-                TextBlock text = new TextBlock();
-                text.Text = "(" + workArea.X + "," + workArea.Y + ")";
-                text.FontSize = 42;
-                frame.Children.Add(text);
             }
         }
 
@@ -216,7 +204,7 @@ namespace FancyZonesEditor
                 Body.ColumnDefinitions.Add(def);
             }
 
-            MainWindowSettingsModel settings = ((App)Application.Current).MainWindowSettings;
+            Settings settings = ((App)Application.Current).ZoneSettings;
             Thickness margin = new Thickness(settings.ShowSpacing ? settings.Spacing / 20 : 0);
 
             List<int> visited = new List<int>();
@@ -276,12 +264,6 @@ namespace FancyZonesEditor
 
         private void RenderCanvasPreview(CanvasLayoutModel canvas)
         {
-            var workArea = canvas.CanvasRect;
-            if (workArea.Width == 0 || workArea.Height == 0 || App.Overlay.SpanZonesAcrossMonitors)
-            {
-                workArea = App.Overlay.WorkArea;
-            }
-
             Viewbox viewbox = new Viewbox
             {
                 Stretch = Stretch.Uniform,
@@ -289,11 +271,10 @@ namespace FancyZonesEditor
             Body.Children.Add(viewbox);
             Canvas frame = new Canvas
             {
-                Width = workArea.Width,
-                Height = workArea.Height,
+                Width = Settings.WorkArea.Width,
+                Height = Settings.WorkArea.Height,
             };
             viewbox.Child = frame;
-
             foreach (Int32Rect zone in canvas.Zones)
             {
                 Rectangle rect = new Rectangle();
@@ -305,14 +286,6 @@ namespace FancyZonesEditor
                 rect.Stroke = Brushes.DarkGray;
                 rect.Fill = Brushes.LightGray;
                 frame.Children.Add(rect);
-            }
-
-            if (App.DebugMode)
-            {
-                TextBlock text = new TextBlock();
-                text.Text = "(" + App.Overlay.WorkArea.X + "," + App.Overlay.WorkArea.Y + ")";
-                text.FontSize = 42;
-                frame.Children.Add(text);
             }
         }
     }

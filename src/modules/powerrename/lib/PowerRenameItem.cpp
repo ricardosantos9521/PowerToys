@@ -1,17 +1,15 @@
 #include "pch.h"
 #include "PowerRenameItem.h"
-#include <common/themes/icon_helpers.h>
+#include "icon_helpers.h"
 
 int CPowerRenameItem::s_id = 0;
 
-IFACEMETHODIMP_(ULONG)
-CPowerRenameItem::AddRef()
+IFACEMETHODIMP_(ULONG) CPowerRenameItem::AddRef()
 {
     return InterlockedIncrement(&m_refCount);
 }
 
-IFACEMETHODIMP_(ULONG)
-CPowerRenameItem::Release()
+IFACEMETHODIMP_(ULONG) CPowerRenameItem::Release()
 {
     long refCount = InterlockedDecrement(&m_refCount);
 
@@ -36,24 +34,19 @@ IFACEMETHODIMP CPowerRenameItem::GetPath(_Outptr_ PWSTR* path)
 {
     *path = nullptr;
     CSRWSharedAutoLock lock(&m_lock);
-    HRESULT hr = E_FAIL;
-    if (m_path)
+    HRESULT hr = m_path ? S_OK : E_FAIL;
+    if (SUCCEEDED(hr))
     {
         hr = SHStrDup(m_path, path);
     }
     return hr;
 }
 
-IFACEMETHODIMP CPowerRenameItem::GetTime(_Outptr_ SYSTEMTIME* time)
+IFACEMETHODIMP CPowerRenameItem::GetDate(_Outptr_ SYSTEMTIME* date)
 {
     CSRWSharedAutoLock lock(&m_lock);
-    HRESULT hr = E_FAIL ;
-
-    if (m_isTimeParsed)
-    {
-        hr = S_OK;
-    }
-    else
+    HRESULT hr = m_isDateParsed ? S_OK : E_FAIL ;
+    if (!m_isDateParsed)
     {
         HANDLE hFile = CreateFileW(m_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
         if (hFile != INVALID_HANDLE_VALUE)
@@ -66,8 +59,8 @@ IFACEMETHODIMP CPowerRenameItem::GetTime(_Outptr_ SYSTEMTIME* time)
                 {
                     if (SystemTimeToTzSpecificLocalTime(NULL, &SystemTime, &LocalTime))
                     {
-                        m_time = LocalTime;
-                        m_isTimeParsed = true;
+                        m_date = LocalTime;
+                        m_isDateParsed = true;
                         hr = S_OK;
                     }
                 }
@@ -75,7 +68,7 @@ IFACEMETHODIMP CPowerRenameItem::GetTime(_Outptr_ SYSTEMTIME* time)
         }
         CloseHandle(hFile);
     }
-    *time = m_time;
+    *date = m_date;
     return hr;
 }
 
@@ -87,8 +80,8 @@ IFACEMETHODIMP CPowerRenameItem::GetShellItem(_Outptr_ IShellItem** ppsi)
 IFACEMETHODIMP CPowerRenameItem::GetOriginalName(_Outptr_ PWSTR* originalName)
 {
     CSRWSharedAutoLock lock(&m_lock);
-    HRESULT hr = E_FAIL;
-    if (m_originalName)
+    HRESULT hr = m_originalName ? S_OK : E_FAIL;
+    if (SUCCEEDED(hr))
     {
         hr = SHStrDup(m_originalName, originalName);
     }
@@ -111,8 +104,8 @@ IFACEMETHODIMP CPowerRenameItem::PutNewName(_In_opt_ PCWSTR newName)
 IFACEMETHODIMP CPowerRenameItem::GetNewName(_Outptr_ PWSTR* newName)
 {
     CSRWSharedAutoLock lock(&m_lock);
-    HRESULT hr = S_OK;
-    if (m_newName)
+    HRESULT hr = m_newName ? S_OK : E_FAIL;
+    if (SUCCEEDED(hr))
     {
         hr = SHStrDup(m_newName, newName);
     }
@@ -191,6 +184,7 @@ IFACEMETHODIMP CPowerRenameItem::ShouldRenameItem(_In_ DWORD flags, _Out_ bool* 
 
 IFACEMETHODIMP CPowerRenameItem::IsItemVisible(_In_ DWORD filter, _In_ DWORD flags, _Out_ bool* isItemVisible)
 {
+    bool shouldRenameItem = false;
     switch (filter)
     {
     case PowerRenameFilters::None:
@@ -200,9 +194,9 @@ IFACEMETHODIMP CPowerRenameItem::IsItemVisible(_In_ DWORD filter, _In_ DWORD fla
         GetSelected(isItemVisible);
         break;
     case PowerRenameFilters::FlagsApplicable:
-        *isItemVisible = !((m_isFolder && (flags & PowerRenameFlags::ExcludeFolders)) ||
-                           (!m_isFolder && (flags & PowerRenameFlags::ExcludeFiles)) ||
-                           (m_depth > 0 && (flags & PowerRenameFlags::ExcludeSubfolders)));
+        *isItemVisible = !((m_isFolder && (flags & PowerRenameFlags::ExcludeFolders)) || 
+            (!m_isFolder && (flags & PowerRenameFlags::ExcludeFiles)) || 
+            (m_depth > 0 && (flags & PowerRenameFlags::ExcludeSubfolders)));
         break;
     case PowerRenameFilters::ShouldRename:
         ShouldRenameItem(flags, isItemVisible);
@@ -224,10 +218,9 @@ HRESULT CPowerRenameItem::s_CreateInstance(_In_opt_ IShellItem* psi, _In_ REFIID
     *resultInterface = nullptr;
 
     CPowerRenameItem *newRenameItem = new CPowerRenameItem();
-    HRESULT hr = E_OUTOFMEMORY;
-    if (newRenameItem)
+    HRESULT hr = newRenameItem ? S_OK : E_OUTOFMEMORY;
+    if (SUCCEEDED(hr))
     {
-        hr = S_OK ;
         if (psi != nullptr)
         {
             hr = newRenameItem->_Init(psi);

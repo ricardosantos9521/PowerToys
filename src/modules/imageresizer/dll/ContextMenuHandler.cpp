@@ -4,10 +4,7 @@
 #include "ContextMenuHandler.h"
 #include "HDropIterator.h"
 #include "Settings.h"
-#include <common/themes/icon_helpers.h>
-#include <common/utils/process_path.h>
-#include <common/utils/resources.h>
-
+#include "common/icon_helpers.h"
 #include "trace.h"
 
 extern HINSTANCE g_hInst_imageResizer;

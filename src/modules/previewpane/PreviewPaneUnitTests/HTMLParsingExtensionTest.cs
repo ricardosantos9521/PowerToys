@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Markdig;
-using Microsoft.PowerToys.PreviewHandler.Markdown;
+using MarkdownPreviewHandler;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace PreviewPaneUnitTests
@@ -11,16 +11,15 @@ namespace PreviewPaneUnitTests
     [TestClass]
     public class HTMLParsingExtensionTest
     {
-        private static MarkdownPipeline BuidPipeline(IMarkdownExtension extension)
+        private MarkdownPipeline BuidPipeline(IMarkdownExtension extension)
         {
             MarkdownPipelineBuilder pipelineBuilder = new MarkdownPipelineBuilder().UseAdvancedExtensions();
             pipelineBuilder.Extensions.Add(extension);
-
             return pipelineBuilder.Build();
         }
 
         [TestMethod]
-        public void ExtensionUpdatesTablesClassWhenUsed()
+        public void Extension_UpdatesTablesClass_WhenUsed()
         {
             // Arrange
             string mdString = "| A | B |\n| -- | -- | ";
@@ -31,12 +30,11 @@ namespace PreviewPaneUnitTests
             string html = Markdown.ToHtml(mdString, markdownPipeline);
 
             // Assert
-            const string expected = "<table class=\"table table-striped table-bordered\">\n<thead>\n<tr>\n<th>A</th>\n<th>B</th>\n</tr>\n</thead>\n</table>\n";
-            Assert.AreEqual(expected, html);
+            Assert.AreEqual(html, "<table class=\"table table-striped table-bordered\">\n<thead>\n<tr>\n<th>A</th>\n<th>B</th>\n</tr>\n</thead>\n</table>\n");
         }
 
         [TestMethod]
-        public void ExtensionUpdatesBlockQuotesClassWhenUsed()
+        public void Extension_UpdatesBlockQuotesClass_WhenUsed()
         {
             // Arrange
             string mdString = "> Blockquotes.";
@@ -47,12 +45,11 @@ namespace PreviewPaneUnitTests
             string html = Markdown.ToHtml(mdString, markdownPipeline);
 
             // Assert
-            const string expected = "<blockquote class=\"blockquote\">\n<p>Blockquotes.</p>\n</blockquote>\n";
-            Assert.AreEqual(expected, html);
+            Assert.AreEqual(html, "<blockquote class=\"blockquote\">\n<p>Blockquotes.</p>\n</blockquote>\n");
         }
 
         [TestMethod]
-        public void ExtensionUpdatesFigureClassAndBlocksRelativeUrlWhenUsed()
+        public void Extension_UpdatesFigureClassAndBlocksRelativeUrl_WhenUsed()
         {
             // arrange
             string mdString = "![text](a.jpg \"Figure\")";
@@ -63,12 +60,11 @@ namespace PreviewPaneUnitTests
             string html = Markdown.ToHtml(mdString, markdownPipeline);
 
             // Assert
-            const string expected = "<p><img src=\"#\" class=\"img-fluid\" alt=\"text\" title=\"Figure\" /></p>\n";
-            Assert.AreEqual(expected, html);
+            Assert.AreEqual(html, "<p><img src=\"#\" class=\"img-fluid\" alt=\"text\" title=\"Figure\" /></p>\n");
         }
 
         [TestMethod]
-        public void ExtensionAddsClassToFigureCaptionWhenUsed()
+        public void Extension_AddsClassToFigureCaption_WhenUsed()
         {
             // arrange
             string mdString = "^^^ This is a caption";
@@ -79,12 +75,11 @@ namespace PreviewPaneUnitTests
             string html = Markdown.ToHtml(mdString, markdownPipeline);
 
             // Assert
-            const string expected = "<figure class=\"figure\">\n<figcaption class=\"figure-caption\">This is a caption</figcaption>\n</figure>\n";
-            Assert.AreEqual(expected, html);
+            Assert.AreEqual(html, "<figure class=\"figure\">\n<figcaption class=\"figure-caption\">This is a caption</figcaption>\n</figure>\n");
         }
 
         [TestMethod]
-        public void ExtensionRemovesExternalImageUrlAndMakeCallbackWhenUsed()
+        public void Extension_RemovesExternalImageUrlAndMakeCallback_WhenUsed()
         {
             // arrange
             int count = 0;
@@ -96,9 +91,8 @@ namespace PreviewPaneUnitTests
             string html = Markdown.ToHtml(mdString, markdownPipeline);
 
             // Assert
-            Assert.AreEqual(1, count);
-            const string expected = "<p><img src=\"#\" class=\"img-fluid\" alt=\"text\" title=\"Figure\" /></p>\n";
-            Assert.AreEqual(expected, html);
+            Assert.AreEqual(count, 1);
+            Assert.AreEqual(html, "<p><img src=\"#\" class=\"img-fluid\" alt=\"text\" title=\"Figure\" /></p>\n");
         }
     }
 }

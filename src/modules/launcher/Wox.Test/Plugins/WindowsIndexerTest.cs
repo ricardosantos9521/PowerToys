@@ -18,14 +18,14 @@ namespace Wox.Test.Plugins
     [TestFixture]
     public class WindowsIndexerTest
     {
-        private static WindowsSearchAPI GetWindowsSearchAPI()
+        private WindowsSearchAPI GetWindowsSearchAPI()
         {
             var mock = new Mock<ISearch>();
             mock.Setup(x => x.Query("dummy-connection-string", "dummy-query")).Returns(new List<OleDBResult>());
             return new WindowsSearchAPI(mock.Object);
         }
 
-        private static ISearchManager GetMockSearchManager()
+        private ISearchManager GetMockSearchManager()
         {
             var sqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE CONTAINS(System.FileName,'\"FilePath\"',1033) AND scope='file:' ORDER BY System.DateModified DESC";
             var mockSearchManager = new Mock<ISearchManager>();
@@ -40,7 +40,7 @@ namespace Wox.Test.Plugins
         }
 
         [Test]
-        public void InitQueryHelperShouldInitializeWhenFunctionIsCalled()
+        public void InitQueryHelper_ShouldInitialize_WhenFunctionIsCalled()
         {
             // Arrange
             int maxCount = 10;
@@ -53,11 +53,11 @@ namespace Wox.Test.Plugins
 
             // Assert
             Assert.IsNotNull(queryHelper);
-            Assert.AreEqual(maxCount, queryHelper.QueryMaxResults);
+            Assert.AreEqual(queryHelper.QueryMaxResults, maxCount);
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternIsAsterisk()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternIsAsterisk()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -70,13 +70,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternContainsAsterisk()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternContainsAsterisk()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -89,13 +88,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternContainsPercent()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternContainsPercent()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -108,13 +106,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternContainsUnderScore()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternContainsUnderScore()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -127,13 +124,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternContainsQuestionMark()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternContainsQuestionMark()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -146,13 +142,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void ModifyQueryHelperShouldSetQueryHelperWhenPatternDoesNotContainSplSymbols()
+        public void ModifyQueryHelper_ShouldSetQueryHelper_WhenPatternDoesNotContainSplSymbols()
         {
             // Arrange
             ISearchQueryHelper queryHelper;
@@ -165,13 +160,12 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("LIKE", StringComparison.Ordinal));
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("Contains", StringComparison.Ordinal));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("LIKE"));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("Contains"));
         }
 
         [Test]
-        public void WindowsSearchAPIShouldReturnResultsWhenSearchWasExecuted()
+        public void WindowsSearchAPI_ShouldReturnResults_WhenSearchWasExecuted()
         {
             // Arrange
             OleDBResult unHiddenFile = new OleDBResult(new List<object>() { "C:/test/path/file1.txt", "file1.txt" });
@@ -192,7 +186,7 @@ namespace Wox.Test.Plugins
         }
 
         [Test]
-        public void WindowsSearchAPIShouldNotReturnResultsWithNullValueWhenDbResultHasANullColumn()
+        public void WindowsSearchAPI_ShouldNotReturnResultsWithNullValue_WhenDbResultHasANullColumn()
         {
             // Arrange
             OleDBResult unHiddenFile = new OleDBResult(new List<object>() { "C:/test/path/file1.txt", DBNull.Value });
@@ -213,7 +207,7 @@ namespace Wox.Test.Plugins
         }
 
         [Test]
-        public void WindowsSearchAPIShouldRequestNormalRequestWhenDisplayHiddenFilesIsTrue()
+        public void WindowsSearchAPI_ShouldRequestNormalRequest_WhenDisplayHiddenFilesIsTrue()
         {
             ISearchQueryHelper queryHelper;
             string pattern = "notepad";
@@ -226,12 +220,11 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2", StringComparison.Ordinal));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2"));
         }
 
         [Test]
-        public void WindowsSearchAPIShouldRequestFilteredRequestWhenDisplayHiddenFilesIsFalse()
+        public void WindowsSearchAPI_ShouldRequestFilteredRequest_WhenDisplayHiddenFilesIsFalse()
         {
             ISearchQueryHelper queryHelper;
             string pattern = "notepad";
@@ -244,12 +237,11 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2", StringComparison.Ordinal));
+            Assert.IsTrue(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2"));
         }
 
         [Test]
-        public void WindowsSearchAPIShouldRequestNormalRequestWhenDisplayHiddenFilesIsTrueAfterRuntimeSwap()
+        public void WindowsSearchAPI_ShouldRequestNormalRequest_WhenDisplayHiddenFilesIsTrue_AfterRuntimeSwap()
         {
             ISearchQueryHelper queryHelper;
             string pattern = "notepad";
@@ -265,15 +257,14 @@ namespace Wox.Test.Plugins
             WindowsSearchAPI.ModifyQueryHelper(ref queryHelper, pattern);
 
             // Assert
-            // Using Ordinal since this is used internally
-            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2", StringComparison.Ordinal));
+            Assert.IsFalse(queryHelper.QueryWhereRestrictions.Contains("AND System.FileAttributes <> SOME BITWISE 2"));
         }
 
         [TestCase("item.exe")]
         [TestCase("item.bat")]
         [TestCase("item.appref-ms")]
         [TestCase("item.lnk")]
-        public void LoadContextMenusMustLoadAllItemsWhenFileIsAnApp(string path)
+        public void LoadContextMenus_MustLoadAllItems_WhenFileIsAnApp(string path)
         {
             // Arrange
             var mockapi = new Mock<IPublicAPI>();
@@ -290,18 +281,18 @@ namespace Wox.Test.Plugins
             List<ContextMenuResult> contextMenuItems = contextMenuLoader.LoadContextMenus(result);
 
             // Assert
-            Assert.AreEqual(4, contextMenuItems.Count);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_open_containing_folder, contextMenuItems[0].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_run_as_administrator, contextMenuItems[1].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_copy_path, contextMenuItems[2].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_open_in_console, contextMenuItems[3].Title);
+            Assert.AreEqual(contextMenuItems.Count, 4);
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_copy_path"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_run_as_administrator"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_containing_folder"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_in_console"), Times.Once());
         }
 
         [TestCase("item.pdf")]
         [TestCase("item.xls")]
         [TestCase("item.ppt")]
         [TestCase("C:/DummyFile.cs")]
-        public void LoadContextMenusMustNotLoadRunAsAdminWhenFileIsAnNotApp(string path)
+        public void LoadContextMenus_MustNotLoadRunAsAdmin_WhenFileIsAnNotApp(string path)
         {
             // Arrange
             var mockapi = new Mock<IPublicAPI>();
@@ -318,15 +309,16 @@ namespace Wox.Test.Plugins
             List<ContextMenuResult> contextMenuItems = contextMenuLoader.LoadContextMenus(result);
 
             // Assert
-            Assert.AreEqual(3, contextMenuItems.Count);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_open_containing_folder, contextMenuItems[0].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_copy_path, contextMenuItems[1].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_open_in_console, contextMenuItems[2].Title);
+            Assert.AreEqual(contextMenuItems.Count, 3);
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_copy_path"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_run_as_administrator"), Times.Never());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_containing_folder"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_in_console"), Times.Once());
         }
 
         [TestCase("C:/DummyFolder")]
         [TestCase("TestFolder")]
-        public void LoadContextMenusMustNotLoadRunAsAdminAndOpenContainingFolderForFolder(string path)
+        public void LoadContextMenus_MustNotLoadRunAsAdminAndOpenContainingFolder_ForFolder(string path)
         {
             // Arrange
             var mockapi = new Mock<IPublicAPI>();
@@ -343,30 +335,106 @@ namespace Wox.Test.Plugins
             List<ContextMenuResult> contextMenuItems = contextMenuLoader.LoadContextMenus(result);
 
             // Assert
-            Assert.AreEqual(2, contextMenuItems.Count);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_copy_path, contextMenuItems[0].Title);
-            Assert.AreEqual(Microsoft.Plugin.Indexer.Properties.Resources.Microsoft_plugin_indexer_open_in_console, contextMenuItems[1].Title);
+            Assert.AreEqual(contextMenuItems.Count, 2);
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_copy_path"), Times.Once());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_run_as_administrator"), Times.Never());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_containing_folder"), Times.Never());
+            mockapi.Verify(m => m.GetTranslation("Microsoft_plugin_indexer_open_in_console"), Times.Once());
         }
 
-        [TestCase(0, 2, false, ExpectedResult = true)]
-        [TestCase(0, 3, true, ExpectedResult = false)]
-        [TestCase(1, 2, false, ExpectedResult = false)]
-        [TestCase(1, 4, true, ExpectedResult = false)]
-        [TestCase(0, 1, false, ExpectedResult = false)]
-        public bool DriveDetectionMustDisplayWarningWhenEnhancedModeIsOffAndWhenWarningIsNotDisabled(int enhancedModeStatus, int driveCount, bool disableWarningCheckBoxStatus)
+        [TestCase(0, false, ExpectedResult = true)]
+        [TestCase(0, true, ExpectedResult = false)]
+        [TestCase(1, false, ExpectedResult = false)]
+        [TestCase(1, true, ExpectedResult = false)]
+        public bool DriveDetection_MustDisplayWarning_WhenEnhancedModeIsOffAndWhenWarningIsNotDisabled(int enhancedModeStatus, bool disableWarningCheckBoxStatus)
         {
             // Arrange
             var mockRegistry = new Mock<IRegistryWrapper>();
             mockRegistry.Setup(r => r.GetHKLMRegistryValue(It.IsAny<string>(), It.IsAny<string>())).Returns(enhancedModeStatus); // Enhanced mode is disabled
 
-            var mockDriveInfo = new Mock<IDriveInfoWrapper>();
-            mockDriveInfo.Setup(d => d.GetDriveCount()).Returns(driveCount);
-
-            IndexerDriveDetection driveDetection = new IndexerDriveDetection(mockRegistry.Object, mockDriveInfo.Object);
+            IndexerDriveDetection driveDetection = new IndexerDriveDetection(mockRegistry.Object);
             driveDetection.IsDriveDetectionWarningCheckBoxSelected = disableWarningCheckBoxStatus;
 
             // Act & Assert
             return driveDetection.DisplayWarning();
+        }
+
+        [Test]
+        public void SimplifyQuery_ShouldRemoveLikeQuery_WhenSQLQueryUsesLIKESyntax()
+        {
+            // Arrange
+            string sqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE (System.FileName LIKE 'abcd.%' OR CONTAINS(System.FileName,'\"abcd.*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+
+            // Act
+            var simplifiedSqlQuery = WindowsSearchAPI.SimplifyQuery(sqlQuery);
+
+            // Assert
+            string expectedSqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE (CONTAINS(System.FileName,'\"abcd.*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+            Assert.IsFalse(simplifiedSqlQuery.Equals(sqlQuery, StringComparison.InvariantCultureIgnoreCase));
+            Assert.IsTrue(simplifiedSqlQuery.Equals(expectedSqlQuery, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [Test]
+        public void SimplifyQuery_ShouldReturnArgument_WhenSQLQueryDoesNotUseLIKESyntax()
+        {
+            // Arrange
+            string sqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE CONTAINS(System.FileName,'\"abcd*\"',1033) AND scope='file:' ORDER BY System.DateModified DESC";
+
+            // Act
+            var simplifiedSqlQuery = WindowsSearchAPI.SimplifyQuery(sqlQuery);
+
+            // Assert
+            Assert.IsTrue(simplifiedSqlQuery.Equals(sqlQuery, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [Test]
+        public void SimplifyQuery_ShouldRemoveAllOccurrencesOfLikeQuery_WhenSQLQueryUsesLIKESyntaxMultipleTimes()
+        {
+            // Arrange
+            string sqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\", \"System.FileExtension\" FROM \"SystemIndex\" WHERE (System.FileName LIKE 'ab.%' OR CONTAINS(System.FileName,'\"ab.*\"',1033)) AND (System.FileExtension LIKE '.cd%' OR CONTAINS(System.FileName,'\".cd*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+
+            // Act
+            var simplifiedSqlQuery = WindowsSearchAPI.SimplifyQuery(sqlQuery);
+
+            // Assert
+            string expectedSqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\", \"System.FileExtension\" FROM \"SystemIndex\" WHERE (CONTAINS(System.FileName,'\"ab.*\"',1033)) AND (CONTAINS(System.FileName,'\".cd*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+            Assert.IsFalse(simplifiedSqlQuery.Equals(sqlQuery, StringComparison.InvariantCultureIgnoreCase));
+            Assert.IsTrue(simplifiedSqlQuery.Equals(expectedSqlQuery, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [Test]
+        public void SimplifyQuery_ShouldRemoveLikeQuery_WhenSQLQueryUsesLIKESyntaxAndContainsEscapedSingleQuotationMarks()
+        {
+            // Arrange
+            string sqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE (System.FileName LIKE '''ab.cd''%' OR CONTAINS(System.FileName,'\"'ab.cd'*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+
+            // Act
+            var simplifiedSqlQuery = WindowsSearchAPI.SimplifyQuery(sqlQuery);
+
+            // Assert
+            string expectedSqlQuery = "SELECT TOP 30 \"System.ItemUrl\", \"System.FileName\", \"System.FileAttributes\" FROM \"SystemIndex\" WHERE (CONTAINS(System.FileName,'\"'ab.cd'*\"',1033)) AND scope='file:' ORDER BY System.DateModified DESC";
+            Assert.IsFalse(simplifiedSqlQuery.Equals(sqlQuery, StringComparison.InvariantCultureIgnoreCase));
+            Assert.IsTrue(simplifiedSqlQuery.Equals(expectedSqlQuery, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        [Test]
+        public void WindowsSearchAPI_ShouldReturnEmptyResults_WhenIsFullQueryIsTrueAndTheQueryDoesNotRequireLIKESyntax()
+        {
+            // Arrange
+            OleDBResult file1 = new OleDBResult(new List<object>() { "C:/test/path/file1.txt", DBNull.Value });
+            OleDBResult file2 = new OleDBResult(new List<object>() { "C:/test/path/file2.txt", "file2.txt" });
+
+            List<OleDBResult> results = new List<OleDBResult>() { file1, file2 };
+            var mock = new Mock<ISearch>();
+            mock.Setup(x => x.Query(It.IsAny<string>(), It.IsAny<string>())).Returns(results);
+            WindowsSearchAPI api = new WindowsSearchAPI(mock.Object, false);
+            var searchManager = GetMockSearchManager();
+
+            // Act
+            var windowsSearchAPIResults = api.Search("file", searchManager, true);
+
+            // Assert
+            Assert.IsTrue(windowsSearchAPIResults.Count() == 0);
         }
     }
 }

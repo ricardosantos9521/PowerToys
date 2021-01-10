@@ -1,10 +1,9 @@
 #include "pch.h"
 #include "KeyboardHook.h"
 #include <exception>
-#include <msclr/marshal.h>
-#include <msclr/marshal_cppstd.h>
+#include <msclr\marshal.h>
+#include <msclr\marshal_cppstd.h>
 #include <common/debug_control.h>
-#include <common/utils/winapi_error.h>
 
 using namespace interop;
 using namespace System::Runtime::InteropServices;
@@ -47,8 +46,7 @@ void KeyboardHook::Start()
             0);
         if (hookHandle == nullptr)
         {
-            DWORD errorCode = GetLastError();
-            show_last_error_message(L"SetWindowsHookEx", errorCode, L"PowerToys - Interop");
+            throw std::exception("SetWindowsHookEx failed.");
         }
     }
 }
@@ -60,10 +58,7 @@ LRESULT __clrcall KeyboardHook::HookProc(int nCode, WPARAM wParam, LPARAM lParam
         KeyboardEvent ^ ev = gcnew KeyboardEvent();
         ev->message = wParam;
         ev->key = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam)->vkCode;
-        ev->dwExtraInfo = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam)->dwExtraInfo;
-
-        // Ignore the keyboard hook if the FilterkeyboardEvent returns false.
-        if ((filterKeyboardEvent != nullptr && !filterKeyboardEvent->Invoke(ev)))
+        if (filterKeyboardEvent != nullptr && !filterKeyboardEvent->Invoke(ev))
         {
             return CallNextHookEx(hookHandle, nCode, wParam, lParam);
         }

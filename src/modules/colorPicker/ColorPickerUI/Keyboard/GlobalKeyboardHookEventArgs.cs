@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.ComponentModel;
-using static ColorPicker.NativeMethods;
+using static ColorPicker.Win32Apis;
 
 namespace ColorPicker.Keyboard
 {

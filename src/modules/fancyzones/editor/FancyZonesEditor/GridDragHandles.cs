@@ -461,10 +461,10 @@ namespace FancyZonesEditor
             _resizers.Clear();
         }
 
-        public bool HasSnappedNonAdjacentResizers(GridResizer resizer)
+        public bool HasSnappedNonAdjascentResizers(GridResizer resizer)
         {
             /**
-             * Resizers between zones 0,1 and 4,5 are snapped to each other and not adjacent.
+             * Resizers between zones 0,1 and 4,5 are snapped to each other and not adjascent.
              * ------------------------------
              * |      0      |      1       |
              * ------------------------------
@@ -473,7 +473,7 @@ namespace FancyZonesEditor
              * |      4      |      5       |
              * ------------------------------
              *
-             * Resizers between zones 0,1 and 2,3 are snapped to each other and adjacent.
+             * Resizers between zones 0,1 and 2,3 are snapped to each other and adjascent.
              * ------------------------------
              * |      0      |      1       |
              * ------------------------------
@@ -484,7 +484,7 @@ namespace FancyZonesEditor
              *
              * Vertical resizers should have same StartColumn and different StartRow.
              * Horizontal resizers should have same StartRow and different StartColumn.
-             * Difference between rows or columns should be more than 1.
+             * Difference between rows or colums should be more than 1.
              */
             foreach (GridResizer r in _resizers)
             {

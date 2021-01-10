@@ -8,7 +8,6 @@ namespace NonLocalizable
     const wchar_t RegCurrentVirtualDesktop[] = L"CurrentVirtualDesktop";
     const wchar_t RegVirtualDesktopIds[] = L"VirtualDesktopIDs";
     const wchar_t RegKeyVirtualDesktops[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VirtualDesktops";
-    const wchar_t RegKeyVirtualDesktopsFromSession[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\SessionInfo\\%d\\VirtualDesktops";
 }
 
 namespace VirtualDesktopUtils
@@ -54,21 +53,20 @@ namespace VirtualDesktopUtils
     bool GetDesktopIdFromCurrentSession(GUID* desktopId)
     {
         DWORD sessionId;
-        if (!ProcessIdToSessionId(GetCurrentProcessId(), &sessionId))
-        {
-            return false;
-        }
+        ProcessIdToSessionId(GetCurrentProcessId(), &sessionId);
 
         wchar_t sessionKeyPath[256]{};
-        if (FAILED(StringCchPrintfW(sessionKeyPath, ARRAYSIZE(sessionKeyPath), NonLocalizable::RegKeyVirtualDesktopsFromSession, sessionId)))
-        {
-            return false;
-        }
+        RETURN_IF_FAILED(
+            StringCchPrintfW(
+                sessionKeyPath,
+                ARRAYSIZE(sessionKeyPath),
+                L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\SessionInfo\\%d\\VirtualDesktops",
+                sessionId));
 
         wil::unique_hkey key{};
+        GUID value{};
         if (RegOpenKeyExW(HKEY_CURRENT_USER, sessionKeyPath, 0, KEY_ALL_ACCESS, &key) == ERROR_SUCCESS)
         {
-            GUID value{};
             DWORD size = sizeof(GUID);
             if (RegQueryValueExW(key.get(), NonLocalizable::RegCurrentVirtualDesktop, 0, nullptr, reinterpret_cast<BYTE*>(&value), &size) == ERROR_SUCCESS)
             {
@@ -81,27 +79,20 @@ namespace VirtualDesktopUtils
 
     bool GetCurrentVirtualDesktopId(GUID* desktopId)
     {
-        // Explorer persists current virtual desktop identifier to registry on a per session basis, but only
-        // after first virtual desktop switch happens. If the user hasn't switched virtual desktops in this
-        // session, value in registry will be empty.
-        if (GetDesktopIdFromCurrentSession(desktopId))
+        if (!GetDesktopIdFromCurrentSession(desktopId))
         {
-            return true;
-        }
-        // Fallback scenario is to get array of virtual desktops stored in registry, but not kept per session.
-        // Note that we are taking first element from virtual desktop array, which is primary desktop.
-        // If user has more than one virtual desktop, previous function should return correct value, as desktop
-        // switch occurred in current session.
-        else
-        {
+            // Explorer persists current virtual desktop identifier to registry on a per session basis,
+            // but only after first virtual desktop switch happens. If the user hasn't switched virtual
+            // desktops (only primary desktop) in this session value in registry will be empty.
+            // If this value is empty take first element from array of virtual desktops (not kept per session).
             std::vector<GUID> ids{};
-            if (GetVirtualDesktopIds(ids) && ids.size() > 0)
+            if (!GetVirtualDesktopIds(ids) || ids.empty())
             {
-                *desktopId = ids[0];
-                return true;
+                return false;
             }
+            *desktopId = ids[0];
         }
-        return false;
+        return true;
     }
 
     bool GetVirtualDesktopIds(HKEY hKey, std::vector<GUID>& ids)

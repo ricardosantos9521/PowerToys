@@ -11,7 +11,6 @@
     <ClInclude Include="Generated Files\resource.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="LauncherConstants.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource Files">

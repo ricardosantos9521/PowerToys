@@ -4,22 +4,21 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows;
 using ManagedCommon;
 using Microsoft.PowerLauncher.Telemetry;
-using Microsoft.PowerToys.Common.UI;
 using Microsoft.PowerToys.Telemetry;
 using PowerLauncher.Helper;
-using PowerLauncher.Plugin;
 using PowerLauncher.ViewModel;
 using Wox;
+using Wox.Core.Plugin;
+using Wox.Core.Resource;
 using Wox.Infrastructure;
 using Wox.Infrastructure.Http;
 using Wox.Infrastructure.Image;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.UserSettings;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 using Stopwatch = Wox.Infrastructure.Stopwatch;
 
 namespace PowerLauncher
@@ -28,9 +27,12 @@ namespace PowerLauncher
     {
         public static PublicAPIInstance API { get; private set; }
 
+        private readonly Alphabet _alphabet = new Alphabet();
+
         private const string Unique = "PowerLauncher_Unique_Application_Mutex";
         private static bool _disposed;
-        private PowerToysRunSettings _settings;
+        private static int _powerToysPid;
+        private Settings _settings;
         private MainViewModel _mainVM;
         private MainWindow _mainWindow;
         private ThemeManager _themeManager;
@@ -39,10 +41,15 @@ namespace PowerLauncher
         private SettingsWatcher _settingsWatcher;
 
         [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
             if (SingleInstance<App>.InitializeAsFirstInstance(Unique))
             {
+                if (args?.Length > 0)
+                {
+                    _ = int.TryParse(args[0], out _powerToysPid);
+                }
+
                 using (var application = new App())
                 {
                     application.InitializeComponent();
@@ -53,37 +60,24 @@ namespace PowerLauncher
 
         private void OnStartup(object sender, StartupEventArgs e)
         {
-            for (int i = 0; i + 1 < e.Args.Length; i++)
+            RunnerHelper.WaitForPowerToysRunner(_powerToysPid, () =>
             {
-                if (e.Args[i] == "-powerToysPid")
+                try
                 {
-                    int powerToysPid;
-                    if (int.TryParse(e.Args[i + 1], out powerToysPid))
-                    {
-                        RunnerHelper.WaitForPowerToysRunner(powerToysPid, () =>
-                        {
-                            try
-                            {
-                                Dispose();
-                            }
-                            finally
-                            {
-                                Environment.Exit(0);
-                            }
-                        });
-                    }
-
-                    break;
+                    Dispose();
                 }
-            }
+                finally
+                {
+                    Environment.Exit(0);
+                }
+            });
 
             var bootTime = new System.Diagnostics.Stopwatch();
             bootTime.Start();
             Stopwatch.Normal("|App.OnStartup|Startup cost", () =>
             {
-                Log.Info("Begin PowerToys Run startup ----------------------------------------------------", GetType());
-                Log.Info($"Runtime info:{ErrorReporting.RuntimeInfo()}", GetType());
-
+                Log.Info("|App.OnStartup|Begin PowerToys Run startup ----------------------------------------------------");
+                Log.Info($"|App.OnStartup|Runtime info:{ErrorReporting.RuntimeInfo()}");
                 RegisterAppDomainExceptions();
                 RegisterDispatcherUnhandledException();
 
@@ -92,32 +86,37 @@ namespace PowerLauncher
 
                 _settingsVM = new SettingWindowViewModel();
                 _settings = _settingsVM.Settings;
-                _settings.UsePowerToysRunnerKeyboardHook = e.Args.Contains("--centralized-kb-hook");
 
-                _stringMatcher = new StringMatcher();
+                _alphabet.Initialize(_settings);
+                _stringMatcher = new StringMatcher(_alphabet);
                 StringMatcher.Instance = _stringMatcher;
                 _stringMatcher.UserSettingSearchPrecision = _settings.QuerySearchPrecision;
 
                 PluginManager.LoadPlugins(_settings.PluginSettings);
                 _mainVM = new MainViewModel(_settings);
                 _mainWindow = new MainWindow(_settings, _mainVM);
-                API = new PublicAPIInstance(_settingsVM, _mainVM, _themeManager);
+                API = new PublicAPIInstance(_settingsVM, _mainVM, _alphabet, _themeManager);
                 PluginManager.InitializePlugins(API);
 
                 Current.MainWindow = _mainWindow;
                 Current.MainWindow.Title = Constant.ExeFileName;
 
+                // happlebao todo temp fix for instance code logic
+                // load plugin before change language, because plugin language also needs be changed
+                InternationalizationManager.Instance.Settings = _settings;
+                InternationalizationManager.Instance.ChangeLanguage(_settings.Language);
+
                 // main windows needs initialized before theme change because of blur settings
-                HttpClient.Proxy = _settings.Proxy;
+                Http.Proxy = _settings.Proxy;
 
                 RegisterExitEvents();
 
-                _settingsWatcher = new SettingsWatcher(_settings, _themeManager);
+                _settingsWatcher = new SettingsWatcher(_settings);
 
                 _mainVM.MainWindowVisibility = Visibility.Visible;
                 _mainVM.ColdStartFix();
                 _themeManager.ThemeChanged += OnThemeChanged;
-                Log.Info("End PowerToys Run startup ----------------------------------------------------  ", GetType());
+                Log.Info("|App.OnStartup|End PowerToys Run startup ----------------------------------------------------  ");
 
                 bootTime.Stop();
 
@@ -177,27 +176,23 @@ namespace PowerLauncher
             {
                 Stopwatch.Normal("|App.OnExit|Exit cost", () =>
                 {
-                    Log.Info("Start PowerToys Run Exit----------------------------------------------------  ", GetType());
+                    Log.Info("|App.OnExit| Start PowerToys Run Exit----------------------------------------------------  ");
                     if (disposing)
                     {
-                        if (_themeManager != null)
-                        {
-                            _themeManager.ThemeChanged -= OnThemeChanged;
-                        }
-
-                        API?.SaveAppAllSettings();
+                        _themeManager.ThemeChanged -= OnThemeChanged;
+                        API.SaveAppAllSettings();
                         PluginManager.Dispose();
-                        _mainWindow?.Dispose();
-                        API?.Dispose();
-                        _mainVM?.Dispose();
-                        _themeManager?.Dispose();
+                        _mainWindow.Dispose();
+                        API.Dispose();
+                        _mainVM.Dispose();
+                        _themeManager.Dispose();
                         _disposed = true;
                     }
 
                     // TODO: free unmanaged resources (unmanaged objects) and override finalizer
                     // TODO: set large fields to null
                     _disposed = true;
-                    Log.Info("End PowerToys Run Exit ----------------------------------------------------  ", GetType());
+                    Log.Info("|App.OnExit| End PowerToys Run Exit ----------------------------------------------------  ");
                 });
             }
         }

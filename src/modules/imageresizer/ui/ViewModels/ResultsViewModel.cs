@@ -4,13 +4,14 @@
 
 using System.Collections.Generic;
 using System.Windows.Input;
-using ImageResizer.Helpers;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using ImageResizer.Models;
 using ImageResizer.Views;
 
 namespace ImageResizer.ViewModels
 {
-    public class ResultsViewModel : Observable
+    public class ResultsViewModel : ViewModelBase
     {
         private readonly IMainView _mainView;
 

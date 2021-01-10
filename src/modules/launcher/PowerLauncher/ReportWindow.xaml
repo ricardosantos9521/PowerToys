@@ -1,23 +1,26 @@
 ﻿<Window x:Class="PowerLauncher.ReportWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:p="clr-namespace:PowerLauncher.Properties"
-        xmlns:ui="http://schemas.modernwpf.com/2019"
-        mc:Ignorable="d"
-        WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource SystemChromeLow}"
-        Topmost="True"
-        ui:WindowHelper.UseModernWindowStyle="True"
-        ResizeMode="NoResize"
-        Width="760"
-        Height="560"
-        Title="{x:Static p:Resources.reportWindow_wox_got_an_error}"
-        d:DesignHeight="300"
-        d:DesignWidth="600"
-        x:ClassModifier="internal">
-    <Grid Margin="12">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             WindowStartupLocation="CenterScreen"
+             Background="{DynamicResource SystemChromeLow}"
+             Icon="Images/app_error.dark.png"
+             Topmost="True"
+             ResizeMode="NoResize"
+             Width="760"
+             Height="560"
+             Title="{DynamicResource reportWindow_wox_got_an_error}"
+             d:DesignHeight="300" d:DesignWidth="600" x:ClassModifier="internal">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Styles/ModernScrollBarStyle.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="64"/>
             <RowDefinition Height="Auto"/>
@@ -25,7 +28,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Text="{x:Static p:Resources.reportWindow_header}"
+        <TextBlock Text="Something went wrong."
                    FontFamily="Segoe UI Light"
                    FontSize="32"
                    Foreground="{DynamicResource ControlTextBrushKey}"/>
@@ -35,30 +38,28 @@
                        TextWrapping="Wrap"
                       
                        Foreground="{DynamicResource ControlTextBrushKey}">
-                <Run Text="{x:Static p:Resources.reportWindow_file_bug}"/>
-                <Hyperlink x:Name="RepositoryHyperlink"
-                           Click="RepositoryHyperlink_Click"
-                           FontWeight="SemiBold"
-                           NavigateUri="https://aka.ms/powerToysReportBug">
-                    <Run Text="{x:Static p:Resources.reportWindow_github_repo}"/>
-                </Hyperlink>
-                <Run Text="{x:Static p:Resources.reportWindow_period}"/>
-                <Run Text="{x:Static p:Resources.reportWindow_upload_log}"/>
+                <Run Text="Please file a bug in the"/>
+                <Hyperlink x:Name="RepositoryHyperlink" Click="RepositoryHyperlink_Click"  FontWeight="SemiBold" NavigateUri="https://aka.ms/powerToysReportBug">PowerToys GitHub repository</Hyperlink><Run Text="."/>
+                <Run Text="Make sure to upload the log file and to include the error message."/>
             </TextBlock>
   
             <TextBox Background="Transparent"
                  BorderThickness="0"
                  Grid.Row="2"
                  x:Name="LogFilePathBox"
-                 Margin="-8,16,-8,16"
+                 Margin="0,16,0,0"
                  FontSize="14"
                  FontFamily="Consolas"
                  Foreground="{DynamicResource ControlTextBrushKey}"
                  IsReadOnly="True"
-                 TextWrapping="Wrap"/>
+                 TextWrapping="Wrap">
+            </TextBox>
 
+       
+        
         <RichTextBox x:Name="ErrorTextbox" 
                      Grid.Row="3"
+                     BorderBrush="{DynamicResource ScrollBarThumbBackground}"
                      BorderThickness="1"
                      Background="Transparent"
                      IsDocumentEnabled="True"

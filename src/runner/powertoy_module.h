@@ -6,15 +6,15 @@
 #include <vector>
 #include <functional>
 
-#include <common/utils/json.h>
+#include <common/json.h>
 
 struct PowertoyModuleDeleter
 {
-    void operator()(PowertoyModuleIface* pt_module) const
+    void operator()(PowertoyModuleIface* module) const
     {
-        if (pt_module)
+        if (module)
         {
-            pt_module->destroy();
+            module->destroy();
         }
     }
 };
@@ -31,20 +31,18 @@ struct PowertoyModuleDLLDeleter
 class PowertoyModule
 {
 public:
-    PowertoyModule(PowertoyModuleIface* pt_module, HMODULE handle);
+    PowertoyModule(PowertoyModuleIface* module, HMODULE handle);
 
     inline PowertoyModuleIface* operator->()
     {
-        return pt_module.get();
+        return module.get();
     }
 
     json::JsonObject json_config() const;
 
-    void update_hotkeys();
-
 private:
     std::unique_ptr<HMODULE, PowertoyModuleDLLDeleter> handle;
-    std::unique_ptr<PowertoyModuleIface, PowertoyModuleDeleter> pt_module;
+    std::unique_ptr<PowertoyModuleIface, PowertoyModuleDeleter> module;
 };
 
 PowertoyModule load_powertoy(const std::wstring_view filename);

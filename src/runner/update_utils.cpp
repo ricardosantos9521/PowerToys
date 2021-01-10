@@ -1,18 +1,12 @@
 #include "pch.h"
 
-#include "Generated Files/resource.h"
-
 #include "action_runner_utils.h"
 #include "update_state.h"
 #include "update_utils.h"
 
-#include <common/updating/installer.h>
+#include <common/timeutil.h>
 #include <common/updating/updating.h>
-#include <common/utils/resources.h>
-#include <common/utils/timeutil.h>
 #include <runner/general_settings.h>
-
-auto Strings = create_notifications_strings();
 
 bool start_msi_uninstallation_sequence()
 {
@@ -24,7 +18,7 @@ bool start_msi_uninstallation_sequence()
         return true;
     }
 
-    if (!updating::offer_msi_uninstallation(Strings))
+    if (!updating::offer_msi_uninstallation())
     {
         // User declined to uninstall or opted for "Don't show again"
         return false;
@@ -60,7 +54,7 @@ void github_update_worker()
         const bool download_updates_automatically = get_general_settings().downloadUpdatesAutomatically;
         try
         {
-            updating::try_autoupdate(download_updates_automatically, Strings).get();
+            updating::try_autoupdate(download_updates_automatically).get();
         }
         catch (...)
         {
@@ -72,25 +66,16 @@ void github_update_worker()
     }
 }
 
-std::optional<updating::new_version_download_info> check_for_updates()
+void check_for_updates()
 {
     try
     {
-        const auto new_version = updating::get_new_github_version_info_async(Strings).get();
-        if (!new_version)
-        {
-            updating::notifications::show_unavailable(Strings, std::move(new_version.error()));
-            return std::nullopt;
-        }
-
-        updating::notifications::show_available(new_version.value(), Strings);
-        return std::move(new_version.value());
+        updating::check_new_version_available();
     }
     catch (...)
     {
         // Couldn't autoupdate
     }
-    return std::nullopt;
 }
 
 bool launch_pending_update()

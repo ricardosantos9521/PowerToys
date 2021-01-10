@@ -5,28 +5,23 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO.Abstractions;
+using System.IO;
 using System.Text;
-using ManagedCommon;
 using Microsoft.Plugin.Uri.UriHelper;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace Microsoft.Plugin.Uri
 {
     public class Main : IPlugin, IPluginI18n, IContextMenu, ISavable, IDisposable
     {
-        private static readonly IFileSystem FileSystem = new FileSystem();
-        private static readonly IPath Path = FileSystem.Path;
-        private static readonly IFile File = FileSystem.File;
-
         private readonly ExtendedUriParser _uriParser;
         private readonly UriResolver _uriResolver;
         private readonly PluginJsonStorage<UriSettings> _storage;
         private bool _disposed;
         private UriSettings _uriSettings;
-        private RegistryWrapper _registryWrapper;
+        private RegisteryWrapper _registeryWrapper;
 
         public Main()
         {
@@ -34,7 +29,7 @@ namespace Microsoft.Plugin.Uri
             _uriSettings = _storage.Load();
             _uriParser = new ExtendedUriParser();
             _uriResolver = new UriResolver();
-            _registryWrapper = new RegistryWrapper();
+            _registeryWrapper = new RegisteryWrapper();
         }
 
         public string BrowserIconPath { get; set; }
@@ -61,7 +56,7 @@ namespace Microsoft.Plugin.Uri
                 results.Add(new Result
                 {
                     Title = uriResultString,
-                    SubTitle = Properties.Resources.Microsoft_plugin_uri_website,
+                    SubTitle = Context.API.GetTranslation("Microsoft_plugin_uri_website"),
                     IcoPath = _uriSettings.ShowBrowserIcon
                         ? BrowserIconPath
                         : DefaultIconPath,
@@ -89,12 +84,12 @@ namespace Microsoft.Plugin.Uri
 
         public string GetTranslatedPluginTitle()
         {
-            return Properties.Resources.Microsoft_plugin_uri_plugin_name;
+            return "Url Handler";
         }
 
         public string GetTranslatedPluginDescription()
         {
-            return Properties.Resources.Microsoft_plugin_uri_plugin_description;
+            return "Handles urls";
         }
 
         public void Save()
@@ -113,17 +108,16 @@ namespace Microsoft.Plugin.Uri
         {
             try
             {
-                var progId = _registryWrapper.GetRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", "ProgId");
+                var progId = _registeryWrapper.GetRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", "ProgId");
                 var programLocation =
 
                     // Resolve App Icon (UWP)
-                    _registryWrapper.GetRegistryValue("HKEY_CLASSES_ROOT\\" + progId + "\\Application", "ApplicationIcon")
+                    _registeryWrapper.GetRegistryValue("HKEY_CLASSES_ROOT\\" + progId + "\\Application", "ApplicationIcon")
 
                     // Resolves default  file association icon (UWP + Normal)
-                    ?? _registryWrapper.GetRegistryValue("HKEY_CLASSES_ROOT\\" + progId + "\\DefaultIcon", null);
+                    ?? _registeryWrapper.GetRegistryValue("HKEY_CLASSES_ROOT\\" + progId + "\\DefaultIcon", null);
 
                 // "Handles 'Indirect Strings' (UWP programs)"
-                // Using Ordinal since this is internal and used with a symbol
                 if (programLocation.StartsWith("@", StringComparison.Ordinal))
                 {
                     var directProgramLocationStringBuilder = new StringBuilder(128);
@@ -142,7 +136,6 @@ namespace Microsoft.Plugin.Uri
                 }
                 else
                 {
-                    // Using Ordinal since this is internal and used with a symbol
                     var indexOfComma = programLocation.IndexOf(',', StringComparison.Ordinal);
                     BrowserIconPath = indexOfComma > 0
                         ? programLocation.Substring(0, indexOfComma)
@@ -152,7 +145,7 @@ namespace Microsoft.Plugin.Uri
             catch (Exception e)
             {
                 BrowserIconPath = DefaultIconPath;
-                Log.Exception("Exception when retrieving icon", e, GetType());
+                Log.Exception("Exception when retreiving icon", e);
             }
         }
 

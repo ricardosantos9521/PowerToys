@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.IO;
 using Markdig;
 using Markdig.Extensions.Figures;
 using Markdig.Extensions.Tables;
@@ -10,7 +12,7 @@ using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
-namespace Microsoft.PowerToys.PreviewHandler.Markdown
+namespace MarkdownPreviewHandler
 {
     /// <summary>
     /// Callback if extension blocks external images.
@@ -31,27 +33,24 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
         /// Initializes a new instance of the <see cref="HTMLParsingExtension"/> class.
         /// </summary>
         /// <param name="imagesBlockedCallBack">Callback function if image is blocked by extension.</param>
-        /// <param name="filePath">Absolute path of markdown file.</param>
-        public HTMLParsingExtension(ImagesBlockedCallBack imagesBlockedCallBack, string filePath = "")
+        /// <param name="baseUrl">Absolute path of markdown file.</param>
+        public HTMLParsingExtension(ImagesBlockedCallBack imagesBlockedCallBack, string baseUrl = "")
         {
             this.imagesBlockedCallBack = imagesBlockedCallBack;
-            FilePath = filePath;
+            this.BaseUrl = baseUrl;
         }
 
         /// <summary>
         /// Gets or sets path to directory containing markdown file.
         /// </summary>
-        public string FilePath { get; set; }
+        public string BaseUrl { get; set; }
 
         /// <inheritdoc/>
         public void Setup(MarkdownPipelineBuilder pipeline)
         {
-            if (pipeline != null)
-            {
-                // Make sure we don't have a delegate twice
-                pipeline.DocumentProcessed -= PipelineOnDocumentProcessed;
-                pipeline.DocumentProcessed += PipelineOnDocumentProcessed;
-            }
+            // Make sure we don't have a delegate twice
+            pipeline.DocumentProcessed -= this.PipelineOnDocumentProcessed;
+            pipeline.DocumentProcessed += this.PipelineOnDocumentProcessed;
         }
 
         /// <inheritdoc/>
@@ -94,7 +93,7 @@ namespace Microsoft.PowerToys.PreviewHandler.Markdown
                         {
                             link.Url = "#";
                             link.GetAttributes().AddClass("img-fluid");
-                            imagesBlockedCallBack();
+                            this.imagesBlockedCallBack();
                         }
                     }
                 }

@@ -4,12 +4,12 @@
 
 using System;
 using System.Drawing;
-
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace PreviewHandlerCommonUnitTests
+namespace UnitTests_PreviewHandlerCommon
 {
     [TestClass]
     public class FormHandlerControlTests
@@ -19,7 +19,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldCreateHandleOnInitialization()
+        public void FormHandlerControl_ShouldCreateHandle_OnInitialization()
         {
             // Arrange and act
             using (var testFormHandlerControl = new TestFormControl())
@@ -30,7 +30,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetVisibleFalseOnInitialization()
+        public void FormHandlerControl_ShouldSetVisibleFalse_OnInitialization()
         {
             // Arrange and act
             using (var testFormHandlerControl = new TestFormControl())
@@ -41,7 +41,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetFormBorderStyleOnInitialization()
+        public void FormHandlerControl_ShouldSetFormBorderStyle_OnInitialization()
         {
             // Arrange and act
             using (var testFormHandlerControl = new TestFormControl())
@@ -52,13 +52,13 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldReturnValidHandleWhenGetHandleCalled()
+        public void FormHandlerControl_ShouldReturnValidHandle_WhenGetHandleCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
             {
                 // Act
-                var handle = testFormHandlerControl.Handle;
+                var handle = testFormHandlerControl.GetHandle();
 
                 // Assert
                 Assert.AreEqual(testFormHandlerControl.Handle, handle);
@@ -66,7 +66,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetBackgroundColorWhenSetBackgroundColorCalled()
+        public void FormHandlerControl_ShouldSetBackgroundColor_WhenSetBackgroundColorCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -82,24 +82,23 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetFontWhenSetFontCalled()
+        public void FormHandlerControl_ShouldSetFont_WhenSetFontCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
             {
-                using (var font = new Font("Arial", 20))
-                {
-                    // Act
-                    testFormHandlerControl.SetFont(font);
+                var font = new Font("Arial", 20);
 
-                    // Assert
-                    Assert.AreEqual(font, testFormHandlerControl.Font);
-                }
+                // Act
+                testFormHandlerControl.SetFont(font);
+
+                // Assert
+                Assert.AreEqual(font, testFormHandlerControl.Font);
             }
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldUpdateBoundsWhenSetRectCalled()
+        public void FormHandlerControl_ShouldUpdateBounds_WhenSetRectCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -115,7 +114,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetTextColorWhenSetTextColorCalled()
+        public void FormHandlerControl_ShouldSetTextColor_WhenSetTextColorCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -131,7 +130,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldClearAllControlsWhenUnloadCalled()
+        public void FormHandlerControl_ShouldClearAllControls_WhenUnloadCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -148,7 +147,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetVisibleFalseWhenUnloadCalled()
+        public void FormHandlerControl_ShouldSetVisibleFalse_WhenUnloadCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -162,7 +161,7 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetVisibletrueWhenDoPreviewCalled()
+        public void FormHandlerControl_ShouldSetVisibletrue_WhenDoPreviewCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
@@ -176,24 +175,26 @@ namespace PreviewHandlerCommonUnitTests
         }
 
         [TestMethod]
-        public void FormHandlerControlShouldSetParentHandleWhenSetWindowCalled()
+        public void FormHandlerControl_ShouldSetParentHandle_WhenSetWindowCalled()
         {
             // Arrange
             using (var testFormHandlerControl = new TestFormControl())
             {
-                using (var parentFormWindow = new UserControl())
-                {
-                    var parentHwnd = parentFormWindow.Handle;
-                    var rect = new Rectangle(2, 2, 4, 4);
+                var parentFormWindow = new UserControl();
+                var parentHwnd = parentFormWindow.Handle;
+                var rect = new Rectangle(2, 2, 4, 4);
 
-                    // Act
-                    testFormHandlerControl.SetWindow(parentHwnd, rect);
-                    var actualParentHwnd = NativeMethods.GetAncestor(testFormHandlerControl.Handle, 1); // GA_PARENT 1
+                // Act
+                testFormHandlerControl.SetWindow(parentHwnd, rect);
+                var actualParentHwnd = GetAncestor(testFormHandlerControl.Handle, 1); // GA_PARENT 1
 
-                    // Assert
-                    Assert.AreEqual(parentHwnd, actualParentHwnd);
-                }
+                // Assert
+                Assert.AreEqual(parentHwnd, actualParentHwnd);
             }
         }
+
+        // Gets the ancestor window: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getancestor
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
     }
 }

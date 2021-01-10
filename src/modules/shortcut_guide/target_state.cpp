@@ -1,9 +1,8 @@
 #include "pch.h"
 #include "target_state.h"
-#include "start_visible.h"
+#include "common/start_visible.h"
 #include "keyboard_state.h"
-#include <common/interop/shared_constants.h>
-#include <common/logger/logger.h>
+#include "common/shared_constants.h"
 
 TargetState::TargetState(int ms_delay) :
     // TODO: All this processing should be done w/o a separate thread etc. in pre_wnd_proc of winkey_popup to avoid
@@ -40,14 +39,16 @@ bool TargetState::signal_event(unsigned vk_code, bool key_down)
     cv.notify_one();
     if (suppress_win_release)
     {
-        // Send a 0xFF VK code, which is outside of the VK code range, to prevent
-        // the start menu from appearing.
+        // Send a fake key-stroke to prevent the start menu from appearing.
+        // We use 0xCF VK code, which is reserved. It still prevents the
+        // start menu from appearing, but should not interfere with any
+        // keyboard shortcuts.
         INPUT input[3] = { {}, {}, {} };
         input[0].type = INPUT_KEYBOARD;
-        input[0].ki.wVk = 0xFF;
+        input[0].ki.wVk = 0xCF;
         input[0].ki.dwExtraInfo = CommonSharedConstants::KEYBOARDMANAGER_INJECTED_FLAG;
         input[1].type = INPUT_KEYBOARD;
-        input[1].ki.wVk = 0xFF;
+        input[1].ki.wVk = 0xCF;
         input[1].ki.dwFlags = KEYEVENTF_KEYUP;
         input[1].ki.dwExtraInfo = CommonSharedConstants::KEYBOARDMANAGER_INJECTED_FLAG;
         input[2].type = INPUT_KEYBOARD;
@@ -144,36 +145,13 @@ void TargetState::thread_proc()
             handle_hidden();
             break;
         case Timeout:
-            try
-            {
-                handle_timeout();
-            }
-            catch (...)
-            {
-                Logger::critical("Timeout, handle_timeout failed.");
-            }
+            handle_timeout();
             break;
         case Shown:
-            try
-            {
-                handle_shown(false);
-            }
-            catch (...)
-            {
-                Logger::critical("Shown, handle_shown failed.");
-            }
-
+            handle_shown(false);
             break;
         case ForceShown:
-            try
-            {
-                handle_shown(true);
-            }
-            catch (...)
-            {
-                Logger::critical("ForceShown, handle_shown failed.");
-            }
-
+            handle_shown(true);
             break;
         case Exiting:
         default:

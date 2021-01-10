@@ -8,7 +8,6 @@ using System.Linq;
 using Moq;
 using NUnit.Framework;
 using Wox.Infrastructure;
-using Wox.Infrastructure.FileSystemHelper;
 using Wox.Plugin;
 
 namespace Microsoft.Plugin.Program.UnitTests.Programs
@@ -24,7 +23,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "notepad.exe",
             FullPath = "c:\\windows\\system32\\notepad.exe",
             LnkResolvedPath = "c:\\users\\powertoys\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\accessories\\notepad.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _notepadUsers = new Win32Program
@@ -33,7 +32,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "notepad.exe",
             FullPath = "c:\\windows\\system32\\notepad.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\accessories\\notepad.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _azureCommandPrompt = new Win32Program
@@ -42,7 +41,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "cmd.exe",
             FullPath = "c:\\windows\\system32\\cmd.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\microsoft azure\\microsoft azure sdk for .net\\v2.9\\microsoft azure command prompt - v2.9.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _visualStudioCommandPrompt = new Win32Program
@@ -51,7 +50,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "cmd.exe",
             FullPath = "c:\\windows\\system32\\cmd.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\visual studio 2019\\visual studio tools\\vc\\x64 native tools command prompt for vs 2019.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _commandPrompt = new Win32Program
@@ -60,25 +59,16 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "cmd.exe",
             FullPath = "c:\\windows\\system32\\cmd.exe",
             LnkResolvedPath = "c:\\users\\powertoys\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\system tools\\command prompt.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
-        };
-
-        private static readonly Win32Program _fileExplorerLink = new Win32Program
-        {
-            Name = "File Explorer",
-            ExecutableName = "File Explorer.lnk",
-            FullPath = "c:\\users\\powertoys\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\system tools\\file explorer.lnk",
-            LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _fileExplorer = new Win32Program
         {
             Name = "File Explorer",
-            ExecutableName = "explorer.exe",
-            FullPath = "c:\\windows\\explorer.exe",
+            ExecutableName = "File Explorer.lnk",
+            FullPath = "c:\\users\\powertoys\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\system tools\\file explorer.lnk",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _wordpad = new Win32Program
@@ -87,7 +77,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "wordpad.exe",
             FullPath = "c:\\program files\\windows nt\\accessories\\wordpad.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\accessories\\wordpad.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _wordpadDuplicate = new Win32Program
@@ -96,7 +86,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "WORDPAD.EXE",
             FullPath = "c:\\program files\\windows nt\\accessories\\wordpad.exe",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _twitterChromePwa = new Win32Program
@@ -132,7 +122,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "msedge.exe",
             FullPath = "c:\\program files (x86)\\microsoft\\edge\\application\\msedge.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\microsoft edge.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _chrome = new Win32Program
@@ -141,7 +131,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "chrome.exe",
             FullPath = "c:\\program files (x86)\\google\\chrome\\application\\chrome.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\google chrome.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _dummyProxyApp = new Win32Program
@@ -150,7 +140,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "test_proxy.exe",
             FullPath = "c:\\program files (x86)\\microsoft\\edge\\application\\test_proxy.exe",
             LnkResolvedPath = "c:\\programdata\\microsoft\\windows\\start menu\\programs\\test proxy.lnk",
-            AppType = Win32Program.ApplicationType.Win32Application,
+            AppType = 2,
         };
 
         private static readonly Win32Program _cmdRunCommand = new Win32Program
@@ -159,7 +149,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "cmd.exe",
             FullPath = "c:\\windows\\system32\\cmd.exe",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.RunCommand, // Run command
+            AppType = 3, // Run command
         };
 
         private static readonly Win32Program _cmderRunCommand = new Win32Program
@@ -169,7 +159,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             ExecutableName = "Cmder.exe",
             FullPath = "c:\\tools\\cmder\\cmder.exe",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.RunCommand, // Run command
+            AppType = 3, // Run command
         };
 
         private static readonly Win32Program _dummyInternetShortcutApp = new Win32Program
@@ -179,7 +169,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             FullPath = "steam://rungameid/1258080",
             ParentDirectory = "C:\\Users\\temp\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Steam",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.InternetShortcutApplication,
+            AppType = 1,
         };
 
         private static readonly Win32Program _dummyInternetShortcutAppDuplicate = new Win32Program
@@ -189,58 +179,8 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             FullPath = "steam://rungameid/1258080",
             ParentDirectory = "C:\\Users\\temp\\Desktop",
             LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.InternetShortcutApplication,
+            AppType = 1,
         };
-
-        private static readonly Win32Program _dummyAppRefApp = new Win32Program
-        {
-            Name = "Dummy AppRef Application",
-            ExecutableName = "dummy.appref-ms",
-            FullPath = "C:\\dummy.appref-ms",
-            ParentDirectory = "C:\\",
-            LnkResolvedPath = null,
-            AppType = Win32Program.ApplicationType.ApprefApplication,
-        };
-
-        private static readonly Win32Program _dummyShortcutApp = new Win32Program
-        {
-            Name = "Dummy Shortcut Application",
-            ExecutableName = "application.lnk",
-            FullPath = "C:\\application.lnk",
-            ParentDirectory = "C:\\",
-            LnkResolvedPath = "C:\\application.lnk",
-            AppType = Win32Program.ApplicationType.ShortcutApplication,
-        };
-
-        private static readonly Win32Program _dummyFolderApp = new Win32Program
-        {
-            Name = "Dummy Folder",
-            ExecutableName = "application.lnk",
-            FullPath = "C:\\dummy\\folder",
-            ParentDirectory = "C:\\dummy\\",
-            LnkResolvedPath = "C:\\tools\\application.lnk",
-            AppType = Win32Program.ApplicationType.Folder,
-        };
-
-        private static readonly Win32Program _dummyGenericFileApp = new Win32Program
-        {
-            Name = "Dummy Folder",
-            ExecutableName = "application.lnk",
-            FullPath = "C:\\dummy\\file.pdf",
-            ParentDirectory = "C:\\dummy\\",
-            LnkResolvedPath = "C:\\tools\\application.lnk",
-            AppType = Win32Program.ApplicationType.GenericFile,
-        };
-
-        private static IDirectoryWrapper GetMockedDirectoryWrapper()
-        {
-            var mockDirectory = new Mock<IDirectoryWrapper>();
-
-            // Check if the file has no extension. This is not actually true since there can be files without extensions, but this is sufficient for the purpose of a mock function
-            Func<string, bool> returnValue = arg => string.IsNullOrEmpty(System.IO.Path.GetExtension(arg));
-            mockDirectory.Setup(m => m.Exists(It.IsAny<string>())).Returns(returnValue);
-            return mockDirectory.Object;
-        }
 
         [Test]
         public void DedupFunctionWhenCalledMustRemoveDuplicateNotepads()
@@ -256,7 +196,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             Win32Program[] apps = Win32Program.DeduplicatePrograms(prgms.AsParallel());
 
             // Assert
-            Assert.AreEqual(1, apps.Length);
+            Assert.AreEqual(apps.Length, 1);
         }
 
         [Test]
@@ -273,7 +213,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             Win32Program[] apps = Win32Program.DeduplicatePrograms(prgms.AsParallel());
 
             // Assert
-            Assert.AreEqual(1, apps.Length);
+            Assert.AreEqual(apps.Length, 1);
         }
 
         [Test]
@@ -282,14 +222,14 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             // Arrange
             List<Win32Program> prgms = new List<Win32Program>
             {
-                _fileExplorerLink,
+                _fileExplorer,
             };
 
             // Act
             Win32Program[] apps = Win32Program.DeduplicatePrograms(prgms.AsParallel());
 
             // Assert
-            Assert.AreEqual(1, apps.Length);
+            Assert.AreEqual(apps.Length, 1);
         }
 
         [Test]
@@ -306,7 +246,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             Win32Program[] apps = Win32Program.DeduplicatePrograms(prgms.AsParallel());
 
             // Assert
-            Assert.AreEqual(1, apps.Length);
+            Assert.AreEqual(apps.Length, 1);
             Assert.IsTrue(!string.IsNullOrEmpty(apps[0].LnkResolvedPath));
         }
 
@@ -325,7 +265,7 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             Win32Program[] apps = Win32Program.DeduplicatePrograms(prgms.AsParallel());
 
             // Assert
-            Assert.AreEqual(3, apps.Length);
+            Assert.AreEqual(apps.Length, 3);
         }
 
         [Test]
@@ -412,14 +352,6 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
             Assert.IsTrue(_commandPrompt.QueryEqualsNameForRunCommands(query));
         }
 
-        [TestCase("explorer")]
-        [TestCase("explorer.exe")]
-        public void Win32ApplicationsShouldNotFilterWhenExecutingNameOrNameIsUsed(string query)
-        {
-            // Even if there is an exact match in the name or exe name, win32 applications should never be filtered
-            Assert.IsTrue(_fileExplorer.QueryEqualsNameForRunCommands(query));
-        }
-
         [TestCase("cmd")]
         [TestCase("Cmd")]
         [TestCase("CMD")]
@@ -437,15 +369,16 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
         {
             // Arrange
             var mock = new Mock<IPublicAPI>();
+            mock.Setup(x => x.GetTranslation(It.IsAny<string>())).Returns(It.IsAny<string>());
 
             // Act
-            List<ContextMenuResult> contextMenuResults = _pinnedWebpage.ContextMenus(string.Empty, mock.Object);
+            List<ContextMenuResult> contextMenuResults = _pinnedWebpage.ContextMenus(mock.Object);
 
             // Assert
-            Assert.AreEqual(3, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_run_as_administrator, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[1].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[2].Title);
+            Assert.AreEqual(contextMenuResults.Count, 3);
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_run_as_administrator"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_containing_folder"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_in_console"), Times.Once());
         }
 
         [Test]
@@ -453,14 +386,15 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
         {
             // Arrange
             var mock = new Mock<IPublicAPI>();
+            mock.Setup(x => x.GetTranslation(It.IsAny<string>())).Returns(It.IsAny<string>());
 
             // Act
-            List<ContextMenuResult> contextMenuResults = _dummyInternetShortcutApp.ContextMenus(string.Empty, mock.Object);
+            List<ContextMenuResult> contextMenuResults = _dummyInternetShortcutApp.ContextMenus(mock.Object);
 
             // Assert
-            Assert.AreEqual(2, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[1].Title);
+            Assert.AreEqual(contextMenuResults.Count, 2);
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_containing_folder"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_in_console"), Times.Once());
         }
 
         [Test]
@@ -468,15 +402,16 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
         {
             // Arrange
             var mock = new Mock<IPublicAPI>();
+            mock.Setup(x => x.GetTranslation(It.IsAny<string>())).Returns(It.IsAny<string>());
 
             // Act
-            List<ContextMenuResult> contextMenuResults = _chrome.ContextMenus(string.Empty, mock.Object);
+            List<ContextMenuResult> contextMenuResults = _chrome.ContextMenus(mock.Object);
 
             // Assert
-            Assert.AreEqual(3, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_run_as_administrator, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[1].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[2].Title);
+            Assert.AreEqual(contextMenuResults.Count, 3);
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_run_as_administrator"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_containing_folder"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_in_console"), Times.Once());
         }
 
         [Test]
@@ -484,123 +419,31 @@ namespace Microsoft.Plugin.Program.UnitTests.Programs
         {
             // Arrange
             var mock = new Mock<IPublicAPI>();
+            mock.Setup(x => x.GetTranslation(It.IsAny<string>())).Returns(It.IsAny<string>());
 
             // Act
-            List<ContextMenuResult> contextMenuResults = _cmdRunCommand.ContextMenus(string.Empty, mock.Object);
+            List<ContextMenuResult> contextMenuResults = _cmdRunCommand.ContextMenus(mock.Object);
 
             // Assert
-            Assert.AreEqual(3, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_run_as_administrator, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[1].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[2].Title);
-        }
-
-        [Test]
-        public void AppRefApplicationShouldReturnContextMenuWithOpenInConsoleWhenContextMenusIsCalled()
-        {
-            // Arrange
-            var mock = new Mock<IPublicAPI>();
-
-            // Act
-            List<ContextMenuResult> contextMenuResults = _dummyAppRefApp.ContextMenus(string.Empty, mock.Object);
-
-            // Assert
-            Assert.AreEqual(3, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_run_as_administrator, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[1].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[2].Title);
-        }
-
-        [Test]
-        public void ShortcutApplicationShouldReturnContextMenuWithOpenInConsoleWhenContextMenusIsCalled()
-        {
-            // Arrange
-            var mock = new Mock<IPublicAPI>();
-
-            // Act
-            List<ContextMenuResult> contextMenuResults = _dummyShortcutApp.ContextMenus(string.Empty, mock.Object);
-
-            // Assert
-            Assert.AreEqual(3, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_run_as_administrator, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[1].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[2].Title);
-        }
-
-        [Test]
-        public void FolderApplicationShouldReturnContextMenuWithOpenInConsoleWhenContextMenusIsCalled()
-        {
-            // Arrange
-            var mock = new Mock<IPublicAPI>();
-
-            // Act
-            List<ContextMenuResult> contextMenuResults = _dummyFolderApp.ContextMenus(string.Empty, mock.Object);
-
-            // Assert
-            Assert.AreEqual(2, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[1].Title);
-        }
-
-        [Test]
-        public void GenericFileApplicationShouldReturnContextMenuWithOpenInConsoleWhenContextMenusIsCalled()
-        {
-            // Arrange
-            var mock = new Mock<IPublicAPI>();
-
-            // Act
-            List<ContextMenuResult> contextMenuResults = _dummyGenericFileApp.ContextMenus(string.Empty, mock.Object);
-
-            // Assert
-            Assert.AreEqual(2, contextMenuResults.Count);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_containing_folder, contextMenuResults[0].Title);
-            Assert.AreEqual(Properties.Resources.wox_plugin_program_open_in_console, contextMenuResults[1].Title);
+            Assert.AreEqual(contextMenuResults.Count, 3);
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_run_as_administrator"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_containing_folder"), Times.Once());
+            mock.Verify(x => x.GetTranslation("wox_plugin_program_open_in_console"), Times.Once());
         }
 
         [Test]
         public void Win32AppsShouldSetNameAsTitleWhileCreatingResult()
         {
             var mock = new Mock<IPublicAPI>();
+            mock.Setup(x => x.GetTranslation(It.IsAny<string>())).Returns(It.IsAny<string>());
             StringMatcher.Instance = new StringMatcher();
 
             // Act
-            var result = _cmderRunCommand.Result("cmder", string.Empty, mock.Object);
+            var result = _cmderRunCommand.Result("cmder", mock.Object);
 
             // Assert
-            // Using Ordinal since this is used internally
             Assert.IsTrue(result.Title.Equals(_cmderRunCommand.Name, StringComparison.Ordinal));
             Assert.IsFalse(result.Title.Equals(_cmderRunCommand.Description, StringComparison.Ordinal));
-        }
-
-        [TestCase("C:\\Program Files\\dummy.exe", ExpectedResult = Win32Program.ApplicationType.Win32Application)]
-        [TestCase("C:\\Program Files\\dummy.msc", ExpectedResult = Win32Program.ApplicationType.Win32Application)]
-        [TestCase("C:\\Program Files\\dummy.lnk", ExpectedResult = Win32Program.ApplicationType.ShortcutApplication)]
-        [TestCase("C:\\Program Files\\dummy.appref-ms", ExpectedResult = Win32Program.ApplicationType.ApprefApplication)]
-        [TestCase("C:\\Program Files\\dummy.url", ExpectedResult = Win32Program.ApplicationType.InternetShortcutApplication)]
-        [TestCase("C:\\Program Files\\dummy", ExpectedResult = Win32Program.ApplicationType.Folder)]
-        [TestCase("C:\\Program Files\\dummy.txt", ExpectedResult = Win32Program.ApplicationType.GenericFile)]
-        public Win32Program.ApplicationType GetAppTypeFromPathShouldReturnCorrectAppTypeWhenAppPathIsPassedAsArgument(string path)
-        {
-            // Directory.Exists must be mocked
-            Win32Program.DirectoryWrapper = GetMockedDirectoryWrapper();
-
-            // Act
-            return Win32Program.GetAppTypeFromPath(path);
-        }
-
-        [TestCase(null)]
-        [TestCase("")]
-        [TestCase("ping 1.1.1.1")]
-        public void EmptyArgumentsShouldNotThrow(string argument)
-        {
-            // Arrange
-            var mock = new Mock<IPublicAPI>();
-
-            // Act
-            List<ContextMenuResult> contextMenuResults = _dummyInternetShortcutApp.ContextMenus(argument, mock.Object);
-
-            // Assert (Should always return if the above does not throw any exception)
-            Assert.True(true);
         }
     }
 }

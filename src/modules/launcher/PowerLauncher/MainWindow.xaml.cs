@@ -6,7 +6,6 @@ using System;
 using System.ComponentModel;
 using System.Timers;
 using System.Windows;
-using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.PowerLauncher.Telemetry;
@@ -15,21 +14,20 @@ using PowerLauncher.Helper;
 using PowerLauncher.ViewModel;
 using Wox.Infrastructure.UserSettings;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using Log = Wox.Plugin.Logger.Log;
 using Screen = System.Windows.Forms.Screen;
 
 namespace PowerLauncher
 {
     public partial class MainWindow : IDisposable
     {
-        private readonly PowerToysRunSettings _settings;
+        private readonly Settings _settings;
         private readonly MainViewModel _viewModel;
         private bool _isTextSetProgrammatically;
         private bool _deletePressed;
         private Timer _firstDeleteTimer = new Timer();
         private bool _coldStateHotkeyPressed;
 
-        public MainWindow(PowerToysRunSettings settings, MainViewModel mainVM)
+        public MainWindow(Settings settings, MainViewModel mainVM)
             : this()
         {
             DataContext = mainVM;
@@ -91,7 +89,6 @@ namespace PowerLauncher
             InputLanguageManager.Current.InputLanguageChanged += SearchBox_InputLanguageChanged;
 
             SearchBox.QueryTextBox.Focus();
-            SearchBox.QueryTextBox.ControlledElements.Add(ListBox.SuggestionsList);
 
             ListBox.DataContext = _viewModel;
             ListBox.SuggestionsList.SelectionChanged += SuggestionsList_SelectionChanged;
@@ -110,7 +107,7 @@ namespace PowerLauncher
                 if (result is ResultViewModel resultVM)
                 {
                     _viewModel.Results.SelectedItem = resultVM;
-                    _viewModel.OpenResultWithMouseCommand.Execute(null);
+                    _viewModel.OpenResultCommand.Execute(null);
                 }
             }
         }
@@ -119,10 +116,10 @@ namespace PowerLauncher
         {
             if (e.PropertyName == nameof(MainViewModel.MainWindowVisibility))
             {
-                if (Visibility == System.Windows.Visibility.Visible && _viewModel.MainWindowVisibility != Visibility.Hidden)
+                if (Visibility == System.Windows.Visibility.Visible)
                 {
                     // Not called on first launch
-                    // Called when window is made visible by hotkey. Not called when the window is deactivated by clicking away
+                    // Additionally called when deactivated by clicking on screen
                     UpdatePosition();
                     BringProcessToForeground();
 
@@ -290,7 +287,7 @@ namespace PowerLauncher
 
         private void UpdateTextBoxToSelectedItem()
         {
-            var itemText = _viewModel?.Results?.SelectedItem?.SearchBoxDisplayText() ?? null;
+            var itemText = _viewModel?.Results?.SelectedItem?.ToString() ?? null;
             if (!string.IsNullOrEmpty(itemText))
             {
                 _viewModel.ChangeQueryText(itemText);
@@ -303,20 +300,7 @@ namespace PowerLauncher
             _viewModel.Results.SelectedItem = (ResultViewModel)listview.SelectedItem;
             if (e.AddedItems.Count > 0 && e.AddedItems[0] != null)
             {
-                try
-                {
-                    listview.ScrollIntoView(e.AddedItems[0]);
-                }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    // Due to virtualization being enabled for the listview, the layout system updates elements in a deferred manner using an algorithm that balances performance and concurrency.
-                    // Hence, there can be a situation where the element index that we want to scroll into view is out of range for it's parent control.
-                    // To mitigate this we use the UpdateLayout function, which forces layout update to ensure that the parent element contains the latest properties.
-                    // However, it has a performance impact and is therefore not called each time.
-                    Log.Exception("The parent element layout is not updated yet", ex, GetType());
-                    listview.UpdateLayout();
-                    listview.ScrollIntoView(e.AddedItems[0]);
-                }
+                listview.ScrollIntoView(e.AddedItems[0]);
             }
 
             // To populate the AutoCompleteTextBox as soon as the selection is changed or set.
@@ -325,7 +309,7 @@ namespace PowerLauncher
             {
                 SearchBox.AutoCompleteTextBlock.Text = MainViewModel.GetAutoCompleteText(
                     _viewModel.Results.SelectedIndex,
-                    _viewModel.Results.SelectedItem?.SearchBoxDisplayText(),
+                    _viewModel.Results.SelectedItem?.ToString(),
                     _viewModel.QueryText);
             }
         }
@@ -334,22 +318,20 @@ namespace PowerLauncher
 
         private void QueryTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var textBox = (TextBox)sender;
-            var text = textBox.Text;
-            var autoCompleteText = SearchBox.AutoCompleteTextBlock.Text;
-
-            if (MainViewModel.ShouldAutoCompleteTextBeEmpty(text, autoCompleteText))
-            {
-                SearchBox.AutoCompleteTextBlock.Text = string.Empty;
-            }
-
             if (_isTextSetProgrammatically)
             {
+                var textBox = (TextBox)sender;
                 textBox.SelectionStart = textBox.Text.Length;
                 _isTextSetProgrammatically = false;
             }
             else
             {
+                var text = ((TextBox)sender).Text;
+                if (string.IsNullOrEmpty(text))
+                {
+                    SearchBox.AutoCompleteTextBlock.Text = string.Empty;
+                }
+
                 _viewModel.QueryText = text;
                 _viewModel.Query();
             }

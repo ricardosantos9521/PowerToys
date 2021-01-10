@@ -46,14 +46,7 @@ namespace Common
         /// </summary>
         public PreviewHandlerBase()
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PreviewHandlerBase"/> class.
-        /// </summary>
-        public void Initialize()
-        {
-            previewControl = CreatePreviewHandlerControl();
+            this.previewControl = this.CreatePreviewHandlerControl();
         }
 
         /// <inheritdoc />
@@ -114,7 +107,7 @@ namespace Common
         /// <inheritdoc />
         public void GetWindow(out IntPtr phwnd)
         {
-            phwnd = this.previewControl.GetWindowHandle();
+            phwnd = this.previewControl.GetHandle();
         }
 
         /// <inheritdoc />

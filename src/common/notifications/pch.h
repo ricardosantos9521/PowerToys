@@ -1,8 +1,8 @@
 #pragma once
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+#ifndef PCH_H
+#define PCH_H
 
-#include <winrt/base.h>
-#include <winrt/Windows.Foundation.Collections.h>
-#include <Windows.h>
+#include "framework.h"
+
+#endif //PCH_H

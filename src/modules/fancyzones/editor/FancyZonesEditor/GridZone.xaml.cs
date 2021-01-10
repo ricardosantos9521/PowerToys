@@ -37,10 +37,10 @@ namespace FancyZonesEditor
         public double[] HorizontalSnapPoints { get; set; }
 
         private readonly Rectangle _splitter;
-        private bool _switchOrientation;
+        private bool _switchOrientation = false;
         private Point _lastPos = new Point(-1, -1);
         private Point _mouseDownPos = new Point(-1, -1);
-        private bool _inMergeDrag;
+        private bool _inMergeDrag = false;
         private Orientation _splitOrientation;
 
         private static void OnSelectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -69,14 +69,14 @@ namespace FancyZonesEditor
             };
             Body.Children.Add(_splitter);
 
-            ((App)Application.Current).MainWindowSettings.PropertyChanged += ZoneSettings_PropertyChanged;
+            ((App)Application.Current).ZoneSettings.PropertyChanged += ZoneSettings_PropertyChanged;
         }
 
         private void ZoneSettings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == PropertyIsShiftKeyPressedID)
             {
-                _switchOrientation = ((App)Application.Current).MainWindowSettings.IsShiftKeyPressed;
+                _switchOrientation = ((App)Application.Current).ZoneSettings.IsShiftKeyPressed;
                 if (_lastPos.X != -1)
                 {
                     UpdateSplitter();
@@ -108,7 +108,7 @@ namespace FancyZonesEditor
         {
             get
             {
-                MainWindowSettingsModel settings = ((App)Application.Current).MainWindowSettings;
+                Settings settings = ((App)Application.Current).ZoneSettings;
                 if (!settings.ShowSpacing)
                 {
                     return 1;
@@ -283,7 +283,7 @@ namespace FancyZonesEditor
         private void DoSplit(Orientation orientation, double offset)
         {
             int spacing = 0;
-            MainWindowSettingsModel settings = ((App)Application.Current).MainWindowSettings;
+            Settings settings = ((App)Application.Current).ZoneSettings;
             if (settings.ShowSpacing)
             {
                 spacing = settings.Spacing;

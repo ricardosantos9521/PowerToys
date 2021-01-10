@@ -12,6 +12,8 @@ namespace ColorPicker.Views
     public partial class ZoomView : UserControl
     {
         public ZoomView()
-            => InitializeComponent();
+        {
+            InitializeComponent();
+        }
     }
 }

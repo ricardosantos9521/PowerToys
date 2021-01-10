@@ -18,9 +18,9 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <param name="hwnd">handle to the window to exclude</param>
         public static void SetWindowExclusionFromLivePreview(IntPtr hwnd)
         {
-            int renderPolicy = (int)NativeMethods.DwmNCRenderingPolicy.Enabled;
+            int renderPolicy = (int)InteropAndHelpers.DwmNCRenderingPolicy.Enabled;
 
-            _ = NativeMethods.DwmSetWindowAttribute(
+            InteropAndHelpers.DwmSetWindowAttribute(
                 hwnd,
                 12,
                 ref renderPolicy,
@@ -34,11 +34,11 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// <param name="windowToSpare">the window which should not be transparent but is not the target window</param>
         public static void ActivateLivePreview(IntPtr targetWindow, IntPtr windowToSpare)
         {
-            _ = NativeMethods.DwmpActivateLivePreview(
+            InteropAndHelpers.DwmpActivateLivePreview(
                     true,
                     targetWindow,
                     windowToSpare,
-                    NativeMethods.LivePreviewTrigger.Superbar,
+                    InteropAndHelpers.LivePreviewTrigger.Superbar,
                     IntPtr.Zero);
         }
 
@@ -47,11 +47,11 @@ namespace Microsoft.Plugin.WindowWalker.Components
         /// </summary>
         public static void DeactivateLivePreview()
         {
-            _ = NativeMethods.DwmpActivateLivePreview(
+            InteropAndHelpers.DwmpActivateLivePreview(
                     false,
                     IntPtr.Zero,
                     IntPtr.Zero,
-                    NativeMethods.LivePreviewTrigger.AltTab,
+                    InteropAndHelpers.LivePreviewTrigger.AltTab,
                     IntPtr.Zero);
         }
     }

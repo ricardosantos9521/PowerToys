@@ -5,6 +5,8 @@
 
 #include <comdef.h>
 #include <taskschd.h>
+#pragma comment(lib, "taskschd.lib")
+#pragma comment(lib, "comsupp.lib")
 
 // Helper macros from wix.
 // TODO: use "s" and "..." parameters to report errors from these functions.

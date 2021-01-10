@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using ManagedCommon;
-using Microsoft.PowerToys.Common.UI;
 
 namespace Wox.Plugin
 {
@@ -71,14 +69,17 @@ namespace Wox.Plugin
         void InstallPlugin(string path);
 
         /// <summary>
-        /// Get all loaded plugins
+        /// Get translation of current language
+        /// You need to implement IPluginI18n if you want to support multiple languages for your plugin
         /// </summary>
-        List<PluginPair> GetAllPlugins();
+        /// <param name="key"></param>
+        /// <returns></returns>
+        string GetTranslation(string key);
 
         /// <summary>
-        /// Show toast notification
+        /// Get all loaded plugins
         /// </summary>
-        /// <param name="text">Notification text</param>
-        void ShowNotification(string text);
+        /// <returns></returns>
+        List<PluginPair> GetAllPlugins();
     }
 }

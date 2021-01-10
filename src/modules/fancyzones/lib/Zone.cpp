@@ -3,86 +3,73 @@
 
 #include <Shellscalingapi.h>
 
-#include <common/display/dpi_aware.h>
-#include <common/display/monitors.h>
+#include <common/dpi_aware.h>
+#include <common/monitors.h>
 #include "Zone.h"
 #include "Settings.h"
 #include "util.h"
 
-namespace
-{
-    bool ValidateZoneRect(const RECT& rect)
-    {
-        int width  = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        return rect.left   >= ZoneConstants::MAX_NEGATIVE_SPACING &&
-               rect.right  >= ZoneConstants::MAX_NEGATIVE_SPACING &&
-               rect.top    >= ZoneConstants::MAX_NEGATIVE_SPACING &&
-               rect.bottom >= ZoneConstants::MAX_NEGATIVE_SPACING &&
-               width >= 0 && height >= 0;
-    }
-
-    BOOL CALLBACK saveDisplayToVector(HMONITOR monitor, HDC hdc, LPRECT rect, LPARAM data)
-    {
-        reinterpret_cast<std::vector<HMONITOR>*>(data)->emplace_back(monitor);
-        return true;
-    }
-
-    bool allMonitorsHaveSameDpiScaling()
-    {
-        std::vector<HMONITOR> monitors;
-        EnumDisplayMonitors(NULL, NULL, saveDisplayToVector, reinterpret_cast<LPARAM>(&monitors));
-
-        if (monitors.size() < 2)
-        {
-            return true;
-        }
-
-        UINT firstMonitorDpiX;
-        UINT firstMonitorDpiY;
-
-        if (S_OK != GetDpiForMonitor(monitors[0], MDT_EFFECTIVE_DPI, &firstMonitorDpiX, &firstMonitorDpiY))
-        {
-            return false;
-        }
-
-        for (int i = 1; i < monitors.size(); i++)
-        {
-            UINT iteratedMonitorDpiX;
-            UINT iteratedMonitorDpiY;
-
-            if (S_OK != GetDpiForMonitor(monitors[i], MDT_EFFECTIVE_DPI, &iteratedMonitorDpiX, &iteratedMonitorDpiY) ||
-                iteratedMonitorDpiX != firstMonitorDpiX)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-}
+#include "common/monitors.h"
 
 struct Zone : winrt::implements<Zone, IZone>
 {
 public:
-    Zone(RECT zoneRect, const size_t zoneId) :
-        m_zoneRect(zoneRect),
-        m_id(zoneId)
+    Zone(RECT zoneRect) :
+        m_zoneRect(zoneRect)
     {
     }
 
-    IFACEMETHODIMP_(RECT) GetZoneRect() const noexcept { return m_zoneRect; }
-    IFACEMETHODIMP_(size_t) Id() const noexcept { return m_id; }
-    IFACEMETHODIMP_(RECT) ComputeActualZoneRect(HWND window, HWND zoneWindow) const noexcept;
+    IFACEMETHODIMP_(RECT) GetZoneRect() noexcept { return m_zoneRect; }
+    IFACEMETHODIMP_(void) SetId(size_t id) noexcept { m_id = id; }
+    IFACEMETHODIMP_(size_t) Id() noexcept { return m_id; }
+    IFACEMETHODIMP_(RECT) ComputeActualZoneRect(HWND window, HWND zoneWindow) noexcept;
 
 private:
     RECT m_zoneRect{};
-    const size_t m_id{};
+    size_t m_id{};
     std::map<HWND, RECT> m_windows{};
 };
 
-RECT Zone::ComputeActualZoneRect(HWND window, HWND zoneWindow) const noexcept
+static BOOL CALLBACK saveDisplayToVector(HMONITOR monitor, HDC hdc, LPRECT rect, LPARAM data)
+{
+    reinterpret_cast<std::vector<HMONITOR>*>(data)->emplace_back(monitor);
+    return true;
+}
+
+bool allMonitorsHaveSameDpiScaling()
+{
+    std::vector<HMONITOR> monitors;
+    EnumDisplayMonitors(NULL, NULL, saveDisplayToVector, reinterpret_cast<LPARAM>(&monitors));
+
+    if (monitors.size() < 2)
+    {
+        return true;
+    }
+
+    UINT firstMonitorDpiX;
+    UINT firstMonitorDpiY;
+
+    if (S_OK != GetDpiForMonitor(monitors[0], MDT_EFFECTIVE_DPI, &firstMonitorDpiX, &firstMonitorDpiY))
+    {
+        return false;
+    }
+
+    for (int i = 1; i < monitors.size(); i++)
+    {
+        UINT iteratedMonitorDpiX;
+        UINT iteratedMonitorDpiY;
+
+        if (S_OK != GetDpiForMonitor(monitors[i], MDT_EFFECTIVE_DPI, &iteratedMonitorDpiX, &iteratedMonitorDpiY) ||
+            iteratedMonitorDpiX != firstMonitorDpiX)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+RECT Zone::ComputeActualZoneRect(HWND window, HWND zoneWindow) noexcept
 {
     // Take care of 1px border
     RECT newWindowRect = m_zoneRect;
@@ -133,14 +120,7 @@ RECT Zone::ComputeActualZoneRect(HWND window, HWND zoneWindow) const noexcept
     return newWindowRect;
 }
 
-winrt::com_ptr<IZone> MakeZone(const RECT& zoneRect, const size_t zoneId) noexcept
+winrt::com_ptr<IZone> MakeZone(const RECT& zoneRect) noexcept
 {
-    if (ValidateZoneRect(zoneRect) && zoneId >= 0)
-    {
-        return winrt::make_self<Zone>(zoneRect, zoneId);
-    }
-    else
-    {
-        return nullptr;
-    }
+    return winrt::make_self<Zone>(zoneRect);
 }

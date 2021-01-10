@@ -4,8 +4,9 @@
 #include "keyboardmanager/common/KeyboardManagerConstants.h"
 #include "keyboardmanager/common/KeyboardManagerState.h"
 #include "ShortcutControl.h"
+#include "common/common.h"
 #include "keyboardmanager/dll/Generated Files/resource.h"
-#include <common/interop/shared_constants.h>
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 //Both static members are initialized to null
 HWND SingleKeyRemapControl::EditKeyboardWindowHandle = nullptr;
@@ -13,23 +14,24 @@ KeyboardManagerState* SingleKeyRemapControl::keyboardManagerState = nullptr;
 // Initialized as new vector
 RemapBuffer SingleKeyRemapControl::singleKeyRemapBuffer;
 
-SingleKeyRemapControl::SingleKeyRemapControl(StackPanel table, StackPanel row, const int colIndex)
+SingleKeyRemapControl::SingleKeyRemapControl(Grid table, const int colIndex)
 {
     typeKey = Button();
     typeKey.as<Button>().Width(KeyboardManagerConstants::RemapTableDropDownWidth);
     typeKey.as<Button>().Content(winrt::box_value(GET_RESOURCE_STRING(IDS_TYPE_BUTTON)));
 
     singleKeyRemapControlLayout = StackPanel();
+    singleKeyRemapControlLayout.as<StackPanel>().Margin({ 0, 0, 0, 10 });
     singleKeyRemapControlLayout.as<StackPanel>().Spacing(10);
     singleKeyRemapControlLayout.as<StackPanel>().Children().Append(typeKey.as<Button>());
 
     // Key column
     if (colIndex == 0)
     {
-        keyDropDownControlObjects.emplace_back(std::make_unique<KeyDropDownControl>(false));
+        keyDropDownControlObjects.push_back(std::move(std::unique_ptr<KeyDropDownControl>(new KeyDropDownControl(false))));
         singleKeyRemapControlLayout.as<StackPanel>().Children().Append(keyDropDownControlObjects[0]->GetComboBox());
         // Set selection handler for the drop down
-        keyDropDownControlObjects[0]->SetSelectionHandler(table, row, colIndex, singleKeyRemapBuffer);
+        keyDropDownControlObjects[0]->SetSelectionHandler(table, singleKeyRemapControlLayout.as<StackPanel>(), colIndex, singleKeyRemapBuffer);
     }
 
     // Hybrid column
@@ -38,11 +40,12 @@ SingleKeyRemapControl::SingleKeyRemapControl(StackPanel table, StackPanel row, c
         hybridDropDownStackPanel = StackPanel();
         hybridDropDownStackPanel.as<StackPanel>().Spacing(KeyboardManagerConstants::ShortcutTableDropDownSpacing);
         hybridDropDownStackPanel.as<StackPanel>().Orientation(Windows::UI::Xaml::Controls::Orientation::Horizontal);
-        KeyDropDownControl::AddDropDown(table, row, hybridDropDownStackPanel.as<StackPanel>(), colIndex, singleKeyRemapBuffer, keyDropDownControlObjects, nullptr, true, true);
+        KeyDropDownControl::AddDropDown(table, singleKeyRemapControlLayout.as<StackPanel>(), hybridDropDownStackPanel.as<StackPanel>(), colIndex, singleKeyRemapBuffer, keyDropDownControlObjects, nullptr, true, true);
         singleKeyRemapControlLayout.as<StackPanel>().Children().Append(hybridDropDownStackPanel.as<StackPanel>());
     }
 
-    typeKey.as<Button>().Click([&, table, colIndex, row](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
+    StackPanel controlStackPanel = singleKeyRemapControlLayout.as<StackPanel>();
+    typeKey.as<Button>().Click([&, table, colIndex, controlStackPanel](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
         // Using the XamlRoot of the typeKey to get the root of the XAML host
         if (colIndex == 0)
         {
@@ -52,72 +55,66 @@ SingleKeyRemapControl::SingleKeyRemapControl(StackPanel table, StackPanel row, c
         else
         {
             keyboardManagerState->SetUIState(KeyboardManagerUIState::DetectShortcutWindowInEditKeyboardWindowActivated, EditKeyboardWindowHandle);
-            ShortcutControl::createDetectShortcutWindow(sender, sender.as<Button>().XamlRoot(), *keyboardManagerState, colIndex, table, keyDropDownControlObjects, row, nullptr, true, true, EditKeyboardWindowHandle, singleKeyRemapBuffer);
+            ShortcutControl::createDetectShortcutWindow(sender, sender.as<Button>().XamlRoot(), *keyboardManagerState, colIndex, table, keyDropDownControlObjects, controlStackPanel, nullptr, true, true, EditKeyboardWindowHandle, singleKeyRemapBuffer);
         }
     });
 
     singleKeyRemapControlLayout.as<StackPanel>().UpdateLayout();
 }
 
-// Function to set the accessible names for all the controls in a row
-void SingleKeyRemapControl::UpdateAccessibleNames(StackPanel sourceColumn, StackPanel mappedToColumn, Button deleteButton, int rowIndex)
-{
-    sourceColumn.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_AUTOMATIONPROPERTIES_ROW) + std::to_wstring(rowIndex) + L", " + GET_RESOURCE_STRING(IDS_EDITKEYBOARD_SOURCEHEADER)));
-    mappedToColumn.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_AUTOMATIONPROPERTIES_ROW) + std::to_wstring(rowIndex) + L", " + GET_RESOURCE_STRING(IDS_EDITKEYBOARD_TARGETHEADER)));
-    deleteButton.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_AUTOMATIONPROPERTIES_ROW) + std::to_wstring(rowIndex) + L", " + GET_RESOURCE_STRING(IDS_DELETE_REMAPPING_BUTTON)));
-}
-
 // Function to add a new row to the remap keys table. If the originalKey and newKey args are provided, then the displayed remap keys are set to those values.
-void SingleKeyRemapControl::AddNewControlKeyRemapRow(StackPanel& parent, std::vector<std::vector<std::unique_ptr<SingleKeyRemapControl>>>& keyboardRemapControlObjects, const DWORD originalKey, const KeyShortcutUnion newKey)
+void SingleKeyRemapControl::AddNewControlKeyRemapRow(Grid& parent, std::vector<std::vector<std::unique_ptr<SingleKeyRemapControl>>>& keyboardRemapControlObjects, const DWORD originalKey, const std::variant<DWORD, Shortcut> newKey)
 {
     // Create new SingleKeyRemapControl objects dynamically so that we does not get destructed
     std::vector<std::unique_ptr<SingleKeyRemapControl>> newrow;
-    StackPanel row = StackPanel();
-    parent.Children().Append(row);
-    newrow.emplace_back(std::make_unique<SingleKeyRemapControl>(parent, row, 0));
-    newrow.emplace_back(std::make_unique<SingleKeyRemapControl>(parent, row, 1));
+    newrow.push_back(std::move(std::unique_ptr<SingleKeyRemapControl>(new SingleKeyRemapControl(parent, 0))));
+    newrow.push_back(std::move(std::unique_ptr<SingleKeyRemapControl>(new SingleKeyRemapControl(parent, 1))));
     keyboardRemapControlObjects.push_back(std::move(newrow));
 
-    row.Padding({ 10, 10, 10, 10 });
-    row.Orientation(Orientation::Horizontal);
-    auto brush = Windows::UI::Xaml::Application::Current().Resources().Lookup(box_value(L"SystemControlBackgroundListLowBrush")).as<Windows::UI::Xaml::Media::SolidColorBrush>();
-    if (keyboardRemapControlObjects.size() % 2)
-    {
-        row.Background(brush);
-    }
-
+    // Add to grid
+    parent.RowDefinitions().Append(RowDefinition());
+    parent.SetColumn(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][0]->getSingleKeyRemapControl(), KeyboardManagerConstants::RemapTableOriginalColIndex);
+    parent.SetRow(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][0]->getSingleKeyRemapControl(), parent.RowDefinitions().Size() - 1);
+    parent.SetColumn(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->getSingleKeyRemapControl(), KeyboardManagerConstants::RemapTableNewColIndex);
+    parent.SetRow(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->getSingleKeyRemapControl(), parent.RowDefinitions().Size() - 1);
     // SingleKeyRemapControl for the original key.
-    auto originalElement = keyboardRemapControlObjects.back()[0]->getSingleKeyRemapControl();
-    originalElement.Width(KeyboardManagerConstants::RemapTableDropDownWidth);
-    row.Children().Append(originalElement);
+    parent.Children().Append(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][0]->getSingleKeyRemapControl());
+
     // Arrow icon
     FontIcon arrowIcon;
     arrowIcon.FontFamily(Media::FontFamily(L"Segoe MDL2 Assets"));
     arrowIcon.Glyph(L"\xE72A");
     arrowIcon.VerticalAlignment(VerticalAlignment::Center);
     arrowIcon.HorizontalAlignment(HorizontalAlignment::Center);
-    auto arrowIconContainer = KeyboardManagerHelper::GetWrapped(arrowIcon, KeyboardManagerConstants::TableArrowColWidth).as<StackPanel>();
-    arrowIconContainer.Orientation(Orientation::Vertical);
-    arrowIconContainer.VerticalAlignment(VerticalAlignment::Center);
-    row.Children().Append(arrowIconContainer);
+    parent.SetColumn(arrowIcon, KeyboardManagerConstants::RemapTableArrowColIndex);
+    parent.SetRow(arrowIcon, parent.RowDefinitions().Size() - 1);
+    parent.Children().Append(arrowIcon);
 
     // SingleKeyRemapControl for the new remap key
-    auto targetElement = keyboardRemapControlObjects.back()[1]->getSingleKeyRemapControl();
-    targetElement.Width(KeyboardManagerConstants::ShortcutTargetColumnWidth);
-    row.Children().Append(targetElement);
+    parent.Children().Append(keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->getSingleKeyRemapControl());
 
     // Set the key text if the two keys are not null (i.e. default args)
     if (originalKey != NULL && !(newKey.index() == 0 && std::get<DWORD>(newKey) == NULL) && !(newKey.index() == 1 && !std::get<Shortcut>(newKey).IsValidShortcut()))
     {
         singleKeyRemapBuffer.push_back(std::make_pair<RemapBufferItem, std::wstring>(RemapBufferItem{ originalKey, newKey }, L""));
-        keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][0]->keyDropDownControlObjects[0]->SetSelectedValue(std::to_wstring(originalKey));
+        std::vector<DWORD> keyCodes = keyboardManagerState->keyboardMap.GetKeyCodeList();
+        std::vector<DWORD> shortcutListKeyCodes = keyboardManagerState->keyboardMap.GetKeyCodeList(true);
+        auto it = std::find(keyCodes.begin(), keyCodes.end(), originalKey);
+        if (it != keyCodes.end())
+        {
+            keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][0]->keyDropDownControlObjects[0]->SetSelectedIndex((int32_t)std::distance(keyCodes.begin(), it));
+        }
         if (newKey.index() == 0)
         {
-            keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->keyDropDownControlObjects[0]->SetSelectedValue(std::to_wstring(std::get<DWORD>(newKey)));
+            it = std::find(shortcutListKeyCodes.begin(), shortcutListKeyCodes.end(), std::get<DWORD>(newKey));
+            if (it != shortcutListKeyCodes.end())
+            {
+                keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->keyDropDownControlObjects[0]->SetSelectedIndex((int32_t)std::distance(shortcutListKeyCodes.begin(), it));
+            }
         }
         else
         {
-            KeyDropDownControl::AddShortcutToControl(std::get<Shortcut>(newKey), parent, keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->hybridDropDownStackPanel.as<StackPanel>(), *keyboardManagerState, 1, keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->keyDropDownControlObjects, singleKeyRemapBuffer, row, nullptr, true, true);
+            KeyDropDownControl::AddShortcutToControl(std::get<Shortcut>(newKey), parent, keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->hybridDropDownStackPanel.as<StackPanel>(), *keyboardManagerState, 1, keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->keyDropDownControlObjects, singleKeyRemapBuffer, keyboardRemapControlObjects[keyboardRemapControlObjects.size() - 1][1]->singleKeyRemapControlLayout.as<StackPanel>(), nullptr, true, true);
         }
     }
     else
@@ -134,48 +131,38 @@ void SingleKeyRemapControl::AddNewControlKeyRemapRow(StackPanel& parent, std::ve
     deleteRemapKeys.Content(deleteSymbol);
     deleteRemapKeys.Background(Media::SolidColorBrush(Colors::Transparent()));
     deleteRemapKeys.HorizontalAlignment(HorizontalAlignment::Center);
-    deleteRemapKeys.Click([&, parent, row, brush](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
-        uint32_t rowIndex;
+    deleteRemapKeys.Click([&](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
+        Button currentButton = sender.as<Button>();
+        uint32_t index;
         // Get index of delete button
         UIElementCollection children = parent.Children();
-        bool indexFound = children.IndexOf(row, rowIndex);
-
-        // IndexOf could fail if the the row got deleted and the button handler was invoked twice. In this case it should return
-        if (!indexFound)
+        children.IndexOf(currentButton, index);
+        uint32_t lastIndexInRow = index + ((KeyboardManagerConstants::RemapTableColCount - 1) - KeyboardManagerConstants::RemapTableRemoveColIndex);
+        // Change the row index of elements appearing after the current row, as we will delete the row definition
+        for (uint32_t i = lastIndexInRow + 1; i < children.Size(); i++)
         {
-            return;
+            int32_t elementRowIndex = parent.GetRow(children.GetAt(i).as<FrameworkElement>());
+            parent.SetRow(children.GetAt(i).as<FrameworkElement>(), elementRowIndex - 1);
         }
 
-        // Update accessible names and background for each row after the deleted row
-        for (uint32_t i = rowIndex + 1; i < children.Size(); i++)
+        for (int i = 0; i < KeyboardManagerConstants::RemapTableColCount; i++)
         {
-            StackPanel row = children.GetAt(i).as<StackPanel>();
-            row.Background(i % 2 ? brush : Media::SolidColorBrush(Colors::Transparent()));
-            StackPanel sourceCol = row.Children().GetAt(0).as<StackPanel>();
-            StackPanel targetCol = row.Children().GetAt(2).as<StackPanel>();
-            Button delButton = row.Children().GetAt(3).as<Button>();
-            UpdateAccessibleNames(sourceCol, targetCol, delButton, i);
+            parent.Children().RemoveAt(lastIndexInRow - i);
         }
 
-        children.RemoveAt(rowIndex);
-        parent.UpdateLayout();
-        singleKeyRemapBuffer.erase(singleKeyRemapBuffer.begin() + rowIndex);
+        // Calculate row index in the buffer from the grid child index (first two children are header elements and then three children in each row)
+        int bufferIndex = (lastIndexInRow - KeyboardManagerConstants::RemapTableHeaderCount) / KeyboardManagerConstants::RemapTableColCount;
+        // Delete the row definition
+        parent.RowDefinitions().RemoveAt(bufferIndex + 1);
+        // delete the row from the buffer.
+        singleKeyRemapBuffer.erase(singleKeyRemapBuffer.begin() + bufferIndex);
         // delete the SingleKeyRemapControl objects so that they get destructed
-        keyboardRemapControlObjects.erase(keyboardRemapControlObjects.begin() + rowIndex);
+        keyboardRemapControlObjects.erase(keyboardRemapControlObjects.begin() + bufferIndex);
     });
-
-    // To set the accessible name of the delete button
-    deleteRemapKeys.SetValue(Automation::AutomationProperties::NameProperty(), box_value(GET_RESOURCE_STRING(IDS_DELETE_REMAPPING_BUTTON)));
-
-    // Add tooltip for delete button which would appear on hover
-    ToolTip deleteRemapKeystoolTip;
-    deleteRemapKeystoolTip.Content(box_value(GET_RESOURCE_STRING(IDS_DELETE_REMAPPING_BUTTON)));
-    ToolTipService::SetToolTip(deleteRemapKeys, deleteRemapKeystoolTip);
-    row.Children().Append(deleteRemapKeys);
+    parent.SetColumn(deleteRemapKeys, KeyboardManagerConstants::RemapTableRemoveColIndex);
+    parent.SetRow(deleteRemapKeys, parent.RowDefinitions().Size() - 1);
+    parent.Children().Append(deleteRemapKeys);
     parent.UpdateLayout();
-
-    // Set accessible names
-    UpdateAccessibleNames(keyboardRemapControlObjects.back()[0]->getSingleKeyRemapControl(), keyboardRemapControlObjects.back()[1]->getSingleKeyRemapControl(), deleteRemapKeys, (int)keyboardRemapControlObjects.size());
 }
 
 // Function to return the stack panel element of the SingleKeyRemapControl. This is the externally visible UI element which can be used to add it to other layouts
@@ -200,7 +187,10 @@ void SingleKeyRemapControl::createDetectKeyWindow(winrt::Windows::Foundation::II
     ComboBox linkedRemapDropDown = KeyboardManagerHelper::getSiblingElement(sender).as<ComboBox>();
 
     auto unregisterKeys = [&keyboardManagerState]() {
-        keyboardManagerState.ClearRegisteredKeyDelays();
+        std::thread t1(&KeyboardManagerState::UnregisterKeyDelay, &keyboardManagerState, VK_ESCAPE);
+        std::thread t2(&KeyboardManagerState::UnregisterKeyDelay, &keyboardManagerState, VK_RETURN);
+        t1.detach();
+        t2.detach();
     };
 
     auto onPressEnter = [linkedRemapDropDown,
@@ -215,7 +205,11 @@ void SingleKeyRemapControl::createDetectKeyWindow(winrt::Windows::Foundation::II
             std::vector<DWORD> keyCodeList = keyboardManagerState.keyboardMap.GetKeyCodeList();
             // Update the drop down list with the new language to ensure that the correct key is displayed
             linkedRemapDropDown.ItemsSource(KeyboardManagerHelper::ToBoxValue(keyboardManagerState.keyboardMap.GetKeyNameList()));
-            linkedRemapDropDown.SelectedValue(winrt::box_value(std::to_wstring(detectedKey)));
+            auto it = std::find(keyCodeList.begin(), keyCodeList.end(), detectedKey);
+            if (it != keyCodeList.end())
+            {
+                linkedRemapDropDown.SelectedIndex((int32_t)std::distance(keyCodeList.begin(), it));
+            }
         }
         // Hide the type key UI
         detectRemapKeyBox.Hide();
@@ -247,7 +241,6 @@ void SingleKeyRemapControl::createDetectKeyWindow(winrt::Windows::Foundation::II
         onAccept();
     });
 
-    // NOTE: UnregisterKeys should never be called on the DelayThread, as it will re-enter the mutex. To avoid this it is run on the dispatcher thread
     keyboardManagerState.RegisterKeyDelay(
         VK_RETURN,
         std::bind(&KeyboardManagerState::SelectDetectedRemapKey, &keyboardManagerState, std::placeholders::_1),
@@ -260,48 +253,41 @@ void SingleKeyRemapControl::createDetectKeyWindow(winrt::Windows::Foundation::II
                     onPressEnter();
                 });
         },
-        [onReleaseEnter, detectRemapKeyBox](DWORD) {
-            detectRemapKeyBox.Dispatcher().RunAsync(
-                Windows::UI::Core::CoreDispatcherPriority::Normal,
-                [onReleaseEnter]() {
-                    onReleaseEnter();
-                });
+        [onReleaseEnter](DWORD) {
+            onReleaseEnter();
         });
 
     TextBlock cancelButtonText;
     cancelButtonText.Text(GET_RESOURCE_STRING(IDS_CANCEL_BUTTON));
-
-    auto onCancel = [&keyboardManagerState,
-                     detectRemapKeyBox,
-                     unregisterKeys] {
-        detectRemapKeyBox.Hide();
-
-        // Reset the keyboard manager UI state
-        keyboardManagerState.ResetUIState();
-        // Revert UI state back to Edit Keyboard window
-        keyboardManagerState.SetUIState(KeyboardManagerUIState::EditKeyboardWindowActivated, EditKeyboardWindowHandle);
-        unregisterKeys();
-    };
 
     Button cancelButton;
     cancelButton.HorizontalAlignment(HorizontalAlignment::Stretch);
     cancelButton.Margin({ 2, 2, 2, 2 });
     cancelButton.Content(cancelButtonText);
     // Cancel button
-    cancelButton.Click([onCancel](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
-        onCancel();
+    cancelButton.Click([detectRemapKeyBox, unregisterKeys, &keyboardManagerState](winrt::Windows::Foundation::IInspectable const& sender, RoutedEventArgs const&) {
+        // Reset the keyboard manager UI state
+        keyboardManagerState.ResetUIState();
+        // Revert UI state back to Edit Keyboard window
+        keyboardManagerState.SetUIState(KeyboardManagerUIState::EditKeyboardWindowActivated, EditKeyboardWindowHandle);
+        unregisterKeys();
+        detectRemapKeyBox.Hide();
     });
 
-    // NOTE: UnregisterKeys should never be called on the DelayThread, as it will re-enter the mutex. To avoid this it is run on the dispatcher thread
     keyboardManagerState.RegisterKeyDelay(
         VK_ESCAPE,
         std::bind(&KeyboardManagerState::SelectDetectedRemapKey, &keyboardManagerState, std::placeholders::_1),
-        [onCancel, detectRemapKeyBox](DWORD) {
+        [&keyboardManagerState, detectRemapKeyBox, unregisterKeys](DWORD) {
             detectRemapKeyBox.Dispatcher().RunAsync(
                 Windows::UI::Core::CoreDispatcherPriority::Normal,
-                [onCancel] {
-                    onCancel();
+                [detectRemapKeyBox] {
+                    detectRemapKeyBox.Hide();
                 });
+
+            keyboardManagerState.ResetUIState();
+            // Revert UI state back to Edit Keyboard window
+            keyboardManagerState.SetUIState(KeyboardManagerUIState::EditKeyboardWindowActivated, EditKeyboardWindowHandle);
+            unregisterKeys();
         },
         nullptr);
 

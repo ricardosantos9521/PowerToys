@@ -1,6 +1,6 @@
 #include <windows.h>
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
+#include <string.h>
 #include <shlwapi.h>
 #include <shlobj.h>
 

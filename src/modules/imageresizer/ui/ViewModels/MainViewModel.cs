@@ -4,14 +4,15 @@
 
 using System.Collections.Generic;
 using System.Windows.Input;
-using ImageResizer.Helpers;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using ImageResizer.Models;
 using ImageResizer.Properties;
 using ImageResizer.Views;
 
 namespace ImageResizer.ViewModels
 {
-    public class MainViewModel : Observable
+    public class MainViewModel : ViewModelBase
     {
         private readonly Settings _settings;
         private readonly ResizeBatch _batch;
@@ -31,20 +32,20 @@ namespace ImageResizer.ViewModels
         public object CurrentPage
         {
             get => _currentPage;
-            set => Set(ref _currentPage, value);
+            set => Set(nameof(CurrentPage), ref _currentPage, value);
         }
 
         public double Progress
         {
             get => _progress;
-            set => Set(ref _progress, value);
+            set => Set(nameof(Progress), ref _progress, value);
         }
 
         public void Load(IMainView view)
         {
             if (_batch.Files.Count == 0)
             {
-                _batch.Files.AddRange(view?.OpenPictureFiles());
+                _batch.Files.AddRange(view.OpenPictureFiles());
             }
 
             CurrentPage = new InputViewModel(_settings, this, view, _batch);

@@ -1,35 +1,23 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using ManagedCommon;
-using Microsoft.Plugin.Program.ProgramArgumentParser;
 using Microsoft.Plugin.Program.Programs;
 using Microsoft.Plugin.Program.Storage;
+using Wox.Infrastructure.Logger;
 using Wox.Infrastructure.Storage;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 using Stopwatch = Wox.Infrastructure.Stopwatch;
 
 namespace Microsoft.Plugin.Program
 {
     public class Main : IPlugin, IPluginI18n, IContextMenu, ISavable, IReloadable, IDisposable
     {
-        // The order of this array is important! The Parsers will be checked in order (index 0 to index Length-1) and the first parser which is able to parse the Query will be used
-        // NoArgumentsArgumentParser does always succeed and therefor should always be last/fallback
-        private static readonly IProgramArgumentParser[] _programArgumentParsers = new IProgramArgumentParser[]
-        {
-            new DoubleDashProgramArgumentParser(),
-            new InferredProgramArgumentParser(),
-            new NoArgumentsArgumentParser(),
-        };
-
         internal static ProgramPluginSettings Settings { get; set; }
 
         private static PluginInitContext _context;
@@ -57,7 +45,7 @@ namespace Microsoft.Plugin.Program
 
             var b = Task.Run(() =>
             {
-                Stopwatch.Normal("|Microsoft.Plugin.Program.Main|Package index cost", _packageRepository.IndexPrograms);
+                Stopwatch.Normal("|Microsoft.Plugin.Program.Main|Win32Program index cost", _packageRepository.IndexPrograms);
             });
 
             Task.WaitAll(a, b);
@@ -72,40 +60,22 @@ namespace Microsoft.Plugin.Program
 
         public List<Result> Query(Query query)
         {
-            var sources = _programArgumentParsers
-                .Where(programArgumentParser => programArgumentParser.Enabled);
-
-            foreach (var programArgumentParser in sources)
-            {
-                if (!programArgumentParser.TryParse(query, out var program, out var programArguments))
-                {
-                    continue;
-                }
-
-                return Query(program, programArguments).ToList();
-            }
-
-            return new List<Result>(0);
-        }
-
-        private IEnumerable<Result> Query(string program, string programArguments)
-        {
-            var result = _win32ProgramRepository
-                .Concat<IProgram>(_packageRepository)
-                .AsParallel()
+            var results1 = _win32ProgramRepository.AsParallel()
                 .Where(p => p.Enabled)
-                .Select(p => p.Result(program, programArguments, _context.API))
-                .Where(r => r?.Score > 0)
-                .ToArray();
+                .Select(p => p.Result(query.Search, _context.API));
 
+            var results2 = _packageRepository.AsParallel()
+                .Where(p => p.Enabled)
+                .Select(p => p.Result(query.Search, _context.API));
+
+            var result = results1.Concat(results2).Where(r => r != null && r.Score > 0);
             if (result.Any())
             {
                 var maxScore = result.Max(x => x.Score);
-                return result
-                    .Where(x => x.Score > Settings.MinScoreThreshold * maxScore);
+                result = result.Where(x => x.Score > Settings.MinScoreThreshold * maxScore);
             }
 
-            return Enumerable.Empty<Result>();
+            return result.ToList();
         }
 
         public void Init(PluginInitContext context)
@@ -141,12 +111,12 @@ namespace Microsoft.Plugin.Program
 
         public string GetTranslatedPluginTitle()
         {
-            return Properties.Resources.wox_plugin_program_plugin_name;
+            return _context.API.GetTranslation("wox_plugin_program_plugin_name");
         }
 
         public string GetTranslatedPluginDescription()
         {
-            return Properties.Resources.wox_plugin_program_plugin_description;
+            return _context.API.GetTranslation("wox_plugin_program_plugin_description");
         }
 
         public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
@@ -157,9 +127,9 @@ namespace Microsoft.Plugin.Program
             }
 
             var menuOptions = new List<ContextMenuResult>();
-            if (selectedResult.ContextData is IProgram program)
+            if (selectedResult.ContextData is Programs.IProgram program)
             {
-                menuOptions = program.ContextMenus(selectedResult.ProgramArguments, _context.API);
+                menuOptions = program.ContextMenus(_context.API);
             }
 
             return menuOptions;
@@ -184,8 +154,8 @@ namespace Microsoft.Plugin.Program
             }
             catch (Exception)
             {
-                var name = "Plugin: " + Properties.Resources.wox_plugin_program_plugin_name;
-                var message = $"{Properties.Resources.powertoys_run_plugin_program_start_failed}: {info?.FileName}";
+                var name = "Plugin: Program";
+                var message = $"Unable to start: {info?.FileName}";
                 _context.API.ShowMsg(name, message, string.Empty);
             }
         }

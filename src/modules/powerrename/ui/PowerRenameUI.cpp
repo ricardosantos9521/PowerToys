@@ -1,15 +1,15 @@
 #include "pch.h"
 #include "Generated Files/resource.h"
 #include "PowerRenameUI.h"
-
-#include <common/utils/resources.h>
-#include <common/display/dpi_aware.h>
+#include "dpi_aware.h"
 #include <commctrl.h>
 #include <Shlobj.h>
 #include <helpers.h>
 #include <windowsx.h>
 #include <thread>
 #include <trace.h>
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 extern HINSTANCE g_hInst;
 
@@ -63,8 +63,7 @@ RepositionMap g_repositionMap[] = {
     { IDC_EDIT_SEARCHFOR, Reposition_Width },
     { IDC_EDIT_REPLACEWITH, Reposition_Width },
     { IDC_LIST_PREVIEW, Reposition_Width | Reposition_Height },
-    { IDC_STATUS_MESSAGE_SELECTED, Reposition_Y },
-    { IDC_STATUS_MESSAGE_RENAMING, Reposition_Y },
+    { IDC_STATUS_MESSAGE, Reposition_Y },
     { ID_RENAME, Reposition_X | Reposition_Y },
     { ID_ABOUT, Reposition_X | Reposition_Y },
     { IDCANCEL, Reposition_X | Reposition_Y }
@@ -120,8 +119,8 @@ HRESULT CPowerRenameUI::s_CreateInstance(_In_ IPowerRenameManager* psrm, _In_opt
 {
     *ppsrui = nullptr;
     CPowerRenameUI* prui = new CPowerRenameUI();
-    HRESULT hr = E_OUTOFMEMORY;
-    if (prui)
+    HRESULT hr = prui ? S_OK : E_OUTOFMEMORY;
+    if (SUCCEEDED(hr))
     {
         // Pass the IPowerRenameManager to the IPowerRenameUI so it can subscribe to events
         hr = prui->_Initialize(psrm, dataSource, enableDragDrop);
@@ -680,8 +679,7 @@ void CPowerRenameUI::_InitDlgText()
     UpdateDlgControl(m_hwnd, IDCANCEL, IDS_CANCEL_BUTTON);
     UpdateDlgControl(m_hwnd, IDC_SEARCH_FOR, IDS_SEARCH_FOR);
     UpdateDlgControl(m_hwnd, IDC_REPLACE_WITH, IDS_REPLACE_WITH);
-    UpdateDlgControl(m_hwnd, IDC_STATUS_MESSAGE_SELECTED, IDS_ITEMS_SELECTED);
-    UpdateDlgControl(m_hwnd, IDC_STATUS_MESSAGE_RENAMING, IDS_ITEMS_RENAMING);
+    UpdateDlgControl(m_hwnd, IDC_STATUS_MESSAGE, IDS_ITEMS_SELECTED);
     UpdateDlgControl(m_hwnd, IDC_OPTIONSGROUP, IDS_OPTIONS);
     UpdateDlgControl(m_hwnd, IDC_PREVIEWGROUP, IDS_PREVIEW);
     UpdateDlgControl(m_hwnd, IDC_SEARCHREPLACEGROUP, IDS_RENAME_CRITERIA);
@@ -739,7 +737,7 @@ BOOL CPowerRenameUI::_OnNotify(_In_ WPARAM wParam, _In_ LPARAM lParam)
     LPNMHDR pnmdr = (LPNMHDR)lParam;
     LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)pnmdr;
     NMLVEMPTYMARKUP* pnmMarkup = NULL;
-
+    
     if (pnmdr)
     {
         BOOL checked = FALSE;
@@ -785,8 +783,7 @@ BOOL CPowerRenameUI::_OnNotify(_In_ WPARAM wParam, _In_ LPARAM lParam)
             }
             break;
 
-        case NM_CLICK:
-        {
+        case NM_CLICK: {
             if (m_spsrm)
             {
                 m_listview.OnClickList(m_spsrm, (NM_LISTVIEW*)pnmdr);
@@ -871,11 +868,8 @@ void CPowerRenameUI::_MoveControl(_In_ DWORD id, _In_ DWORD repositionFlags)
         width = mainWindowWidth - static_cast<int>(m_itemsPositioning.listPreviewWidthDiff * scale);
         height = mainWindowHeight - static_cast<int>(m_itemsPositioning.listPreviewHeightDiff * scale);
         break;
-    case IDC_STATUS_MESSAGE_SELECTED:
-        y = mainWindowHeight - static_cast<int>(m_itemsPositioning.statusMessageSelectedYDiff * scale);
-        break;
-    case IDC_STATUS_MESSAGE_RENAMING:
-        y = mainWindowHeight - static_cast<int>(m_itemsPositioning.statusMessageRenamingYDiff * scale);
+    case IDC_STATUS_MESSAGE:
+        y = mainWindowHeight - static_cast<int>(m_itemsPositioning.statusMessageYDiff * scale);
         break;
     case ID_RENAME:
         x = mainWindowWidth - static_cast<int>(m_itemsPositioning.renameButtonXDiff * scale);
@@ -942,7 +936,7 @@ void CPowerRenameUI::_SetCheckboxesFromFlags(_In_ DWORD flags)
 
 void CPowerRenameUI::_ValidateFlagCheckbox(_In_ DWORD checkBoxId)
 {
-    if (checkBoxId == IDC_TRANSFORM_UPPERCASE)
+    if (checkBoxId == IDC_TRANSFORM_UPPERCASE )
     {
         if (Button_GetCheck(GetDlgItem(m_hwnd, IDC_TRANSFORM_UPPERCASE)) == BST_CHECKED)
         {
@@ -1006,17 +1000,12 @@ void CPowerRenameUI::_UpdateCounts()
         m_renamingCount = renamingCount;
 
         // Update selected and rename count label
-        wchar_t countsLabelFormatSelected[100] = { 0 };
-        wchar_t countsLabelFormatRenaming[100] = { 0 };
-        LoadString(g_hInst, IDS_COUNTSLABELSELECTEDFMT, countsLabelFormatSelected, ARRAYSIZE(countsLabelFormatSelected));
-        LoadString(g_hInst, IDS_COUNTSLABELRENAMINGFMT, countsLabelFormatRenaming, ARRAYSIZE(countsLabelFormatRenaming));
+        wchar_t countsLabelFormat[100] = { 0 };
+        LoadString(g_hInst, IDS_COUNTSLABELFMT, countsLabelFormat, ARRAYSIZE(countsLabelFormat));
 
-        wchar_t countsLabelSelected[100] = { 0 };
-        wchar_t countsLabelRenaming[100] = { 0 };
-        StringCchPrintf(countsLabelSelected, ARRAYSIZE(countsLabelSelected), countsLabelFormatSelected, selectedCount);
-        StringCchPrintf(countsLabelRenaming, ARRAYSIZE(countsLabelRenaming), countsLabelFormatRenaming, renamingCount);
-        SetDlgItemText(m_hwnd, IDC_STATUS_MESSAGE_SELECTED, countsLabelSelected);
-        SetDlgItemText(m_hwnd, IDC_STATUS_MESSAGE_RENAMING, countsLabelRenaming);
+        wchar_t countsLabel[100] = { 0 };
+        StringCchPrintf(countsLabel, ARRAYSIZE(countsLabel), countsLabelFormat, selectedCount, renamingCount);
+        SetDlgItemText(m_hwnd, IDC_STATUS_MESSAGE, countsLabel);
 
         // Update Rename button state
         EnableWindow(GetDlgItem(m_hwnd, ID_RENAME), (renamingCount > 0));
@@ -1036,25 +1025,22 @@ void CPowerRenameUI::_CollectItemPosition(_In_ DWORD id)
     switch (id)
     {
     case IDC_EDIT_SEARCHFOR:
-        /* IDC_EDIT_REPLACEWITH uses same value*/
+    /* IDC_EDIT_REPLACEWITH uses same value*/
         m_itemsPositioning.searchReplaceWidthDiff = m_initialWidth - itemWidth;
         break;
     case IDC_PREVIEWGROUP:
         m_itemsPositioning.previewGroupHeightDiff = m_initialHeight - itemHeight;
         break;
     case IDC_SEARCHREPLACEGROUP:
-        /* IDC_OPTIONSGROUP uses same value */
+    /* IDC_OPTIONSGROUP uses same value */
         m_itemsPositioning.groupsWidthDiff = m_initialWidth - itemWidth;
         break;
     case IDC_LIST_PREVIEW:
         m_itemsPositioning.listPreviewWidthDiff = m_initialWidth - itemWidth;
         m_itemsPositioning.listPreviewHeightDiff = m_initialHeight - itemHeight;
         break;
-    case IDC_STATUS_MESSAGE_SELECTED:
-        m_itemsPositioning.statusMessageSelectedYDiff = m_initialHeight - rcWindow.top;
-        break;
-    case IDC_STATUS_MESSAGE_RENAMING:
-        m_itemsPositioning.statusMessageRenamingYDiff = m_initialHeight - rcWindow.top;
+    case IDC_STATUS_MESSAGE:
+        m_itemsPositioning.statusMessageYDiff = m_initialHeight - rcWindow.top;
         break;
     case ID_RENAME:
         m_itemsPositioning.renameButtonXDiff = m_initialWidth - rcWindow.left;
@@ -1131,6 +1117,7 @@ void CPowerRenameListView::ToggleItem(_In_ IPowerRenameManager* psrm, _In_ int i
         spItem->GetSelected(&selected);
         spItem->PutSelected(!selected);
 
+        
         UINT visibleItemCount = 0;
         psrm->GetVisibleItemCount(&visibleItemCount);
         SetItemCount(visibleItemCount);
@@ -1427,6 +1414,7 @@ void CPowerRenameListView::_UpdateHeaderFilterState(_In_ DWORD filter)
         }
 
         Header_SetItem(hwndHeader, 1, &hdiRename);
+
     }
 }
 
@@ -1442,3 +1430,4 @@ void CPowerRenameListView::OnColumnClick(_In_ IPowerRenameManager* psrm, _In_ in
     psrm->GetFilter(&filter);
     _UpdateHeaderFilterState(filter);
 }
+    

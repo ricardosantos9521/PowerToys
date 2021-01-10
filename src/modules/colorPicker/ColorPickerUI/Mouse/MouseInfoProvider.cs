@@ -10,7 +10,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using ColorPicker.Helpers;
 using ColorPicker.Settings;
-using static ColorPicker.NativeMethods;
+using static ColorPicker.Win32Apis;
 
 namespace ColorPicker.Mouse
 {
@@ -24,7 +24,6 @@ namespace ColorPicker.Mouse
         private readonly IUserSettings _userSettings;
         private System.Windows.Point _previousMousePosition = new System.Windows.Point(-1, 1);
         private Color _previousColor = Color.Transparent;
-        private bool _colorFormatChanged;
 
         [ImportingConstructor]
         public MouseInfoProvider(AppStateHandler appStateMonitor, IUserSettings userSettings)
@@ -32,16 +31,11 @@ namespace ColorPicker.Mouse
             _timer.Interval = TimeSpan.FromMilliseconds(MousePullInfoIntervalInMs);
             _timer.Tick += Timer_Tick;
 
-            if (appStateMonitor != null)
-            {
-                appStateMonitor.AppShown += AppStateMonitor_AppShown;
-                appStateMonitor.AppClosed += AppStateMonitor_AppClosed;
-                appStateMonitor.AppHidden += AppStateMonitor_AppClosed;
-            }
-
+            appStateMonitor.AppShown += AppStateMonitor_AppShown;
+            appStateMonitor.AppClosed += AppStateMonitor_AppClosed;
+            appStateMonitor.AppHidden += AppStateMonitor_AppClosed;
             _mouseHook = new MouseHook();
             _userSettings = userSettings;
-            _userSettings.CopiedColorRepresentation.PropertyChanged += CopiedColorRepresentation_PropertyChanged;
         }
 
         public event EventHandler<Color> MouseColorChanged;
@@ -75,10 +69,9 @@ namespace ColorPicker.Mouse
             }
 
             var color = GetPixelColor(mousePosition);
-            if (_previousColor != color || _colorFormatChanged)
+            if (_previousColor != color)
             {
                 _previousColor = color;
-                _colorFormatChanged = false;
                 MouseColorChanged?.Invoke(this, color);
             }
         }
@@ -86,13 +79,11 @@ namespace ColorPicker.Mouse
         private static Color GetPixelColor(System.Windows.Point mousePosition)
         {
             var rect = new Rectangle((int)mousePosition.X, (int)mousePosition.Y, 1, 1);
-            using (var bmp = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb))
-            {
-                var g = Graphics.FromImage(bmp);
-                g.CopyFromScreen(rect.Left, rect.Top, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
+            var bmp = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb);
+            var g = Graphics.FromImage(bmp);
+            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
 
-                return bmp.GetPixel(0, 0);
-            }
+            return bmp.GetPixel(0, 0);
         }
 
         private static System.Windows.Point GetCursorPosition()
@@ -138,11 +129,6 @@ namespace ColorPicker.Mouse
         {
             DisposeHook();
             OnMouseDown?.Invoke(this, p);
-        }
-
-        private void CopiedColorRepresentation_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            _colorFormatChanged = true;
         }
 
         private void DisposeHook()

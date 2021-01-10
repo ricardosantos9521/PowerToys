@@ -2,8 +2,8 @@
 
 #include "JsonHelpers.h"
 
-#include <common/SettingsAPI/settings_helpers.h>
-#include <common/utils/json.h>
+#include <common/settings_helpers.h>
+#include <common/json.h>
 #include <mutex>
 
 #include <string>
@@ -11,12 +11,10 @@
 #include <optional>
 #include <vector>
 #include <winnt.h>
-#include <lib/JsonHelpers.h>
 
 namespace FancyZonesDataTypes
 {
     struct ZoneSetData;
-    struct DeviceIdData;
     struct DeviceInfoData;
     struct CustomZoneSetData;
     struct AppZoneHistoryData;
@@ -42,13 +40,13 @@ public:
 
     std::optional<FancyZonesDataTypes::CustomZoneSetData> FindCustomZoneSet(const std::wstring& guid) const;
 
-    inline const JSONHelpers::TDeviceInfoMap & GetDeviceInfoMap() const
+    inline const std::unordered_map<std::wstring, FancyZonesDataTypes::DeviceInfoData>& GetDeviceInfoMap() const
     {
         std::scoped_lock lock{ dataLock };
         return deviceInfoMap;
     }
 
-    inline const JSONHelpers::TCustomZoneSetsMap & GetCustomZoneSetsMap() const
+    inline const std::unordered_map<std::wstring, FancyZonesDataTypes::CustomZoneSetData>& GetCustomZoneSetsMap() const
     {
         std::scoped_lock lock{ dataLock };
         return customZoneSetsMap;
@@ -60,12 +58,7 @@ public:
         return appZoneHistoryMap;
     }
 
-    inline const std::wstring& GetZonesSettingsFileName() const 
-    {
-        return zonesSettingsFileName;
-    }
-
-    bool AddDevice(const std::wstring& deviceId);
+    void AddDevice(const std::wstring& deviceId);
     void CloneDeviceInfo(const std::wstring& source, const std::wstring& destination);
     void UpdatePrimaryDesktopData(const std::wstring& desktopId);
     void RemoveDeletedDesktops(const std::vector<std::wstring>& activeDesktops);
@@ -78,15 +71,13 @@ public:
 
     void SetActiveZoneSet(const std::wstring& deviceId, const FancyZonesDataTypes::ZoneSetData& zoneSet);
 
-    void SerializeDeviceInfoToTmpFile(const GUID& currentVirtualDesktop) const;
+    bool SerializeDeviceInfoToTmpFile(const std::wstring& uniqueId) const;
     void ParseDataFromTmpFiles();
 
     json::JsonObject GetPersistFancyZonesJSON();
 
     void LoadFancyZonesData();
     void SaveFancyZonesData() const;
-    void SaveZoneSettings() const;
-    void SaveAppZoneHistory() const;
 
 private:
 #if defined(UNIT_TESTS)
@@ -122,17 +113,18 @@ private:
     }
 #endif
     void ParseDeviceInfoFromTmpFile(std::wstring_view tmpFilePath);
-    void ParseCustomZoneSetsFromTmpFile(std::wstring_view tmpFilePath);
+    void ParseCustomZoneSetFromTmpFile(std::wstring_view tmpFilePath);
     void ParseDeletedCustomZoneSetsFromTmpFile(std::wstring_view tmpFilePath);
 
+    void MigrateCustomZoneSetsFromRegistry();
     void RemoveDesktopAppZoneHistory(const std::wstring& desktopId);
 
     // Maps app path to app's zone history data
     std::unordered_map<std::wstring, std::vector<FancyZonesDataTypes::AppZoneHistoryData>> appZoneHistoryMap{};
     // Maps device unique ID to device data
-    JSONHelpers::TDeviceInfoMap deviceInfoMap{};
+    std::unordered_map<std::wstring, FancyZonesDataTypes::DeviceInfoData> deviceInfoMap{};
     // Maps custom zoneset UUID to it's data
-    JSONHelpers::TCustomZoneSetsMap customZoneSetsMap{};
+    std::unordered_map<std::wstring, FancyZonesDataTypes::CustomZoneSetData> customZoneSetsMap{};
 
     std::wstring zonesSettingsFileName;
     std::wstring appZoneHistoryFileName;
@@ -145,11 +137,3 @@ private:
 };
 
 FancyZonesData& FancyZonesDataInstance();
-
-namespace DefaultValues
-{
-    const int ZoneCount = 3;
-    const bool ShowSpacing = true;
-    const int Spacing = 16;
-    const int SensitivityRadius = 20;
-}

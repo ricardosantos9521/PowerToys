@@ -5,23 +5,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Windows;
-using ColorPicker.ViewModelContracts;
 
 namespace ColorPicker.Helpers
 {
     [Export(typeof(AppStateHandler))]
     public class AppStateHandler
     {
-        private readonly IColorEditorViewModel _colorEditorViewModel;
-        private ColorEditorWindow _colorEditorWindow;
-        private bool _colorPickerShown;
-        private object _colorPickerVisibilityLock = new object();
-
         [ImportingConstructor]
-        public AppStateHandler(IColorEditorViewModel colorEditorViewModel)
+        public AppStateHandler()
         {
             Application.Current.MainWindow.Closed += MainWindow_Closed;
-            _colorEditorViewModel = colorEditorViewModel;
         }
 
         public event EventHandler AppShown;
@@ -32,43 +25,16 @@ namespace ColorPicker.Helpers
 
         public void ShowColorPicker()
         {
-            lock (_colorPickerVisibilityLock)
-            {
-                if (!_colorPickerShown)
-                {
-                    AppShown?.Invoke(this, EventArgs.Empty);
-                    Application.Current.MainWindow.Opacity = 0;
-                    Application.Current.MainWindow.Visibility = Visibility.Visible;
-                    _colorPickerShown = true;
-                }
-            }
+            AppShown?.Invoke(this, EventArgs.Empty);
+            Application.Current.MainWindow.Opacity = 0;
+            Application.Current.MainWindow.Visibility = Visibility.Visible;
         }
 
         public void HideColorPicker()
         {
-            lock (_colorPickerVisibilityLock)
-            {
-                if (_colorPickerShown)
-                {
-                    Application.Current.MainWindow.Opacity = 0;
-                    Application.Current.MainWindow.Visibility = Visibility.Collapsed;
-                    AppHidden?.Invoke(this, EventArgs.Empty);
-                    _colorPickerShown = false;
-                }
-            }
-        }
-
-        public void ShowColorPickerEditor()
-        {
-            if (_colorEditorWindow == null)
-            {
-                _colorEditorWindow = new ColorEditorWindow();
-                _colorEditorWindow.Content = _colorEditorViewModel;
-                _colorEditorViewModel.OpenColorPickerRequested += ColorEditorViewModel_OpenColorPickerRequested;
-            }
-
-            _colorEditorViewModel.Initialize();
-            _colorEditorWindow.Show();
+            Application.Current.MainWindow.Opacity = 0;
+            Application.Current.MainWindow.Visibility = Visibility.Collapsed;
+            AppHidden?.Invoke(this, EventArgs.Empty);
         }
 
         public static void SetTopMost()
@@ -80,12 +46,6 @@ namespace ColorPicker.Helpers
         private void MainWindow_Closed(object sender, EventArgs e)
         {
             AppClosed?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void ColorEditorViewModel_OpenColorPickerRequested(object sender, EventArgs e)
-        {
-            ShowColorPicker();
-            _colorEditorWindow.Hide();
         }
     }
 }

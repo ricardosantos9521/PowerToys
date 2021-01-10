@@ -1,4 +1,4 @@
-using System.IO.Abstractions;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -7,9 +7,6 @@ namespace PowerToysTests
     [TestClass]
     public class FancyZonesEditorTemplatesApplyTests : FancyZonesEditor
     {
-        private static readonly IFileSystem FileSystem = new FileSystem();
-        private static readonly IFile File = FileSystem.File;
-
         private void ApplyLayout(string tabName)
         {
             editorWindow.FindElementByName(tabName).Click();

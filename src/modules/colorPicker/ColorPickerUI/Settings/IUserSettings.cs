@@ -2,9 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.ObjectModel;
-using ColorPicker.Common;
-using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
+using Microsoft.PowerToys.Settings.UI.Lib;
 
 namespace ColorPicker.Settings
 {
@@ -15,15 +13,5 @@ namespace ColorPicker.Settings
         SettingItem<bool> ChangeCursor { get; }
 
         SettingItem<ColorRepresentationType> CopiedColorRepresentation { get; set; }
-
-        SettingItem<ColorPickerActivationAction> ActivationAction { get; }
-
-        RangeObservableCollection<string> ColorHistory { get; }
-
-        SettingItem<int> ColorHistoryLimit { get; }
-
-        ObservableCollection<string> VisibleColorFormats { get; }
-
-        SettingItem<bool> ShowColorName { get; }
     }
 }

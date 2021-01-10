@@ -14,9 +14,9 @@ namespace Wox.Test
     public class WoxTest
     {
         // A Dummy class to test that OnPropertyChanged() is called while we set the variable
-        private class DummyTestClass : BaseModel
+        public class DummyTestClass : BaseModel
         {
-            public bool IsFunctionCalled { get; set; }
+            public bool IsFunctionCalled { get; set; } = false;
 
             private ICommand _item;
 
@@ -45,7 +45,7 @@ namespace Wox.Test
         }
 
         [Test]
-        public void AnyVariableMustCallOnPropertyChangedWhenSet()
+        public void AnyVariable_MustCallOnPropertyChanged_WhenSet()
         {
             // Arrange
             DummyTestClass testClass = new DummyTestClass();

@@ -3,14 +3,15 @@
 #include <interface/powertoy_module_interface.h>
 #include <settings.h>
 #include <trace.h>
-#include <common/SettingsAPI/settings_objects.h>
-#include <common/utils/resources.h>
+#include <common/settings_objects.h>
+#include <common/common.h>
 #include "Generated Files/resource.h"
 #include <atomic>
-#include <dll/PowerRenameConstants.h>
 
 std::atomic<DWORD> g_dwModuleRefCount = 0;
 HINSTANCE g_hInst = 0;
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 class CPowerRenameClassFactory : public IClassFactory
 {
@@ -121,10 +122,9 @@ STDAPI DllCanUnloadNow(void)
 //
 STDAPI DllGetClassObject(_In_ REFCLSID clsid, _In_ REFIID riid, _Outptr_ void** ppv)
 {
-    HRESULT hr = E_FAIL;
     *ppv = NULL;
     CPowerRenameClassFactory* pClassFactory = new CPowerRenameClassFactory(clsid);
-    hr = pClassFactory->QueryInterface(riid, ppv);
+    HRESULT hr = pClassFactory->QueryInterface(riid, ppv);
     pClassFactory->Release();
     return hr;
 }
@@ -155,20 +155,12 @@ private:
     // Enabled by default
     bool m_enabled = true;
     std::wstring app_name;
-    //contains the non localized key of the powertoy
-    std::wstring app_key;
 
 public:
-    // Return the localized display name of the powertoy
+    // Return the display name of the powertoy, this will be cached
     virtual PCWSTR get_name() override
     {
         return app_name.c_str();
-    }
-
-    // Return the non localized key of the powertoy, this will be cached by the runner
-    virtual const wchar_t* get_key() override
-    {
-        return app_key.c_str();
     }
 
     // Enable the powertoy
@@ -233,11 +225,6 @@ public:
             GET_RESOURCE_STRING(IDS_EXTENDED_MENU_INFO),
             CSettingsInstance().GetExtendedContextMenuOnly());
 
-        settings.add_bool_toggle(
-            L"bool_use_boost_lib",
-            GET_RESOURCE_STRING(IDS_USE_BOOST_LIB),
-            CSettingsInstance().GetUseBoostLib());
-
         return settings.serialize_to_buffer(buffer, buffer_size);
     }
 
@@ -249,14 +236,13 @@ public:
         {
             // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+                PowerToysSettings::PowerToyValues::from_json_string(config);
 
             CSettingsInstance().SetPersistState(values.get_bool_value(L"bool_persist_input").value());
             CSettingsInstance().SetMRUEnabled(values.get_bool_value(L"bool_mru_enabled").value());
             CSettingsInstance().SetMaxMRUSize(values.get_int_value(L"int_max_mru_size").value());
             CSettingsInstance().SetShowIconOnMenu(values.get_bool_value(L"bool_show_icon_on_menu").value());
             CSettingsInstance().SetExtendedContextMenuOnly(values.get_bool_value(L"bool_show_extended_menu").value());
-            CSettingsInstance().SetUseBoostLib(values.get_bool_value(L"bool_use_boost_lib").value());
             CSettingsInstance().Save();
 
             Trace::SettingsChanged();
@@ -296,7 +282,6 @@ public:
     {
         init_settings();
         app_name = GET_RESOURCE_STRING(IDS_POWERRENAME_APP_NAME);
-        app_key = PowerRenameConstants::ModuleKey;
     }
 
     ~PowerRenameModule(){};

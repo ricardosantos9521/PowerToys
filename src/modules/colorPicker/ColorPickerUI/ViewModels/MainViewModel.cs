@@ -4,8 +4,8 @@
 
 using System;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using ColorPicker.Common;
@@ -15,7 +15,7 @@ using ColorPicker.Mouse;
 using ColorPicker.Settings;
 using ColorPicker.Telemetry;
 using ColorPicker.ViewModelContracts;
-using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
+using Microsoft.PowerToys.Settings.UI.Lib;
 using Microsoft.PowerToys.Telemetry;
 
 namespace ColorPicker.ViewModels
@@ -26,21 +26,9 @@ namespace ColorPicker.ViewModels
         private readonly ZoomWindowHelper _zoomWindowHelper;
         private readonly AppStateHandler _appStateHandler;
         private readonly IUserSettings _userSettings;
-
-        /// <summary>
-        /// Backing field for <see cref="OtherColor"/>
-        /// </summary>
-        private string _colorText;
-
-        /// <summary>
-        /// Backing field for <see cref="ColorBrush"/>
-        /// </summary>
+        private string _hexColor;
+        private string _rgbColor;
         private Brush _colorBrush;
-
-        /// <summary>
-        /// Backing field for <see cref="ColorName"/>
-        /// </summary>
-        private string _colorName;
 
         [ImportingConstructor]
         public MainViewModel(
@@ -54,23 +42,48 @@ namespace ColorPicker.ViewModels
             _appStateHandler = appStateHandler;
             _userSettings = userSettings;
 
-            if (mouseInfoProvider != null)
-            {
-                mouseInfoProvider.MouseColorChanged += Mouse_ColorChanged;
-                mouseInfoProvider.OnMouseDown += MouseInfoProvider_OnMouseDown;
-                mouseInfoProvider.OnMouseWheel += MouseInfoProvider_OnMouseWheel;
-            }
+            mouseInfoProvider.MouseColorChanged += Mouse_ColorChanged;
+            mouseInfoProvider.OnMouseDown += MouseInfoProvider_OnMouseDown;
+            mouseInfoProvider.OnMouseWheel += MouseInfoProvider_OnMouseWheel;
 
-            _userSettings.ShowColorName.PropertyChanged += (s, e) => { OnPropertyChanged(nameof(ShowColorName)); };
-            keyboardMonitor?.Start();
+            keyboardMonitor.Start();
         }
 
-        /// <summary>
-        /// Gets the current selected color as a <see cref="Brush"/>
-        /// </summary>
+        public string HexColor
+        {
+            get
+            {
+                return _hexColor;
+            }
+
+            private set
+            {
+                _hexColor = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RgbColor
+        {
+            get
+            {
+                return _rgbColor;
+            }
+
+            private set
+            {
+                _rgbColor = value;
+                OnPropertyChanged();
+            }
+        }
+
         public Brush ColorBrush
         {
-            get => _colorBrush;
+            get
+            {
+                return _colorBrush;
+            }
+
             private set
             {
                 _colorBrush = value;
@@ -78,87 +91,74 @@ namespace ColorPicker.ViewModels
             }
         }
 
-        /// <summary>
-        /// Gets the text representation of the selected color value
-        /// </summary>
-        public string ColorText
-        {
-            get => _colorText;
-            private set
-            {
-                _colorText = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string ColorName
-        {
-            get => _colorName;
-            private set
-            {
-                _colorName = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool ShowColorName
-        {
-            get => _userSettings.ShowColorName.Value;
-        }
-
-        /// <summary>
-        /// Tell the color picker that the color on the position of the mouse cursor have changed
-        /// </summary>
-        /// <param name="sender">The sender of this event</param>
-        /// <param name="color">The new <see cref="Color"/> under the mouse cursor</param>
         private void Mouse_ColorChanged(object sender, System.Drawing.Color color)
         {
+            HexColor = ColorToHex(color);
+            RgbColor = ColorToRGB(color);
             ColorBrush = new SolidColorBrush(Color.FromArgb(color.A, color.R, color.G, color.B));
-            ColorText = ColorRepresentationHelper.GetStringRepresentation(color, _userSettings.CopiedColorRepresentation.Value);
-            if (_userSettings.ShowColorName.Value)
-            {
-                ColorName = ColorNameHelper.GetColorName(color);
-            }
         }
 
-        /// <summary>
-        /// Tell the color picker that the user have press a mouse button (after release the button)
-        /// </summary>
-        /// <param name="sender">The sender of this event</param>
-        /// <param name="p">The current <see cref="System.Drawing.Point"/> of the mouse cursor</param>
         private void MouseInfoProvider_OnMouseDown(object sender, System.Drawing.Point p)
         {
-            ClipboardHelper.CopyToClipboard(ColorText);
+            string colorRepresentationToCopy = string.Empty;
 
-            _userSettings.ColorHistory.Insert(0, GetColorString());
-
-            if (_userSettings.ColorHistory.Count > _userSettings.ColorHistoryLimit.Value)
+            switch (_userSettings.CopiedColorRepresentation.Value)
             {
-                _userSettings.ColorHistory.RemoveAt(_userSettings.ColorHistory.Count - 1);
+                case ColorRepresentationType.HEX:
+                    colorRepresentationToCopy = HexColor;
+                    break;
+                case ColorRepresentationType.RGB:
+                    colorRepresentationToCopy = RgbColor;
+                    break;
+                default:
+                    break;
             }
+
+            CopyToClipboard(colorRepresentationToCopy);
 
             _appStateHandler.HideColorPicker();
-
-            if (_userSettings.ActivationAction.Value == ColorPickerActivationAction.OpenColorPickerAndThenEditor || _userSettings.ActivationAction.Value == ColorPickerActivationAction.OpenEditor)
-            {
-                _appStateHandler.ShowColorPickerEditor();
-            }
-
             PowerToysTelemetry.Log.WriteEvent(new ColorPickerShowEvent());
         }
 
-        private string GetColorString()
+        private static void CopyToClipboard(string colorRepresentationToCopy)
         {
-            var color = ((SolidColorBrush)ColorBrush).Color;
-            return color.A + "|" + color.R + "|" + color.G + "|" + color.B;
+            if (!string.IsNullOrEmpty(colorRepresentationToCopy))
+            {
+                // nasty hack - sometimes clipboard can be in use and it will raise and exception
+                for (int i = 0; i < 10; i++)
+                {
+                    try
+                    {
+                        Clipboard.SetText(colorRepresentationToCopy);
+                        break;
+                    }
+                    catch (COMException ex)
+                    {
+                        const uint CLIPBRD_E_CANT_OPEN = 0x800401D0;
+                        if ((uint)ex.ErrorCode != CLIPBRD_E_CANT_OPEN)
+                        {
+                            Logger.LogError("Failed to set text into clipboard", ex);
+                        }
+                    }
+
+                    System.Threading.Thread.Sleep(10);
+                }
+            }
         }
 
-        /// <summary>
-        /// Tell the color picker that the user have used the mouse wheel
-        /// </summary>
-        /// <param name="sender">The sender of this event</param>
-        /// <param name="e">The new values for the zoom</param>
         private void MouseInfoProvider_OnMouseWheel(object sender, Tuple<Point, bool> e)
-            => _zoomWindowHelper.Zoom(e.Item1, e.Item2);
+        {
+            _zoomWindowHelper.Zoom(e.Item1, e.Item2);
+        }
+
+        private static string ColorToHex(System.Drawing.Color c)
+        {
+            return "#" + c.R.ToString("X2", CultureInfo.InvariantCulture) + c.G.ToString("X2", CultureInfo.InvariantCulture) + c.B.ToString("X2", CultureInfo.InvariantCulture);
+        }
+
+        private static string ColorToRGB(System.Drawing.Color c)
+        {
+            return "RGB(" + c.R.ToString(CultureInfo.InvariantCulture) + "," + c.G.ToString(CultureInfo.InvariantCulture) + "," + c.B.ToString(CultureInfo.InvariantCulture) + ")";
+        }
     }
 }

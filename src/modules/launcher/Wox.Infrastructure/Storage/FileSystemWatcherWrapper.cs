@@ -8,7 +8,7 @@ using System.IO;
 namespace Wox.Infrastructure.Storage
 {
     // File System Watcher Wrapper class which implements the IFileSystemWatcherWrapper interface
-    public sealed class FileSystemWatcherWrapper : FileSystemWatcher, IFileSystemWatcherWrapper
+    public class FileSystemWatcherWrapper : FileSystemWatcher, IFileSystemWatcherWrapper
     {
         public FileSystemWatcherWrapper()
         {

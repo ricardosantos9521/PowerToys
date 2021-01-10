@@ -15,18 +15,5 @@
 #include <ShlObj_core.h>
 #include <shellapi.h>
 #include <filesystem>
-#include <msi.h>
-#include <PathCch.h>
-
-#include <optional>
-
-#include <expected.hpp>
-
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Foundation.Collections.h>
-#include <winrt/Windows.Networking.Connectivity.h>
-#include <winrt/Windows.ApplicationModel.h>
-#include <winrt/Windows.Management.Deployment.h>
 
 #endif //PCH_H
-

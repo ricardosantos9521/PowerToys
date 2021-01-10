@@ -14,7 +14,7 @@ namespace Wox.Infrastructure.Storage
 
         bool Contains(T item);
 
-        void SetList(IList<T> list);
+        void Set(IList<T> list);
 
         bool Any();
     }

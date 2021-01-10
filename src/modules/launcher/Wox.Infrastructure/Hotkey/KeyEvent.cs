@@ -9,21 +9,21 @@ namespace Wox.Infrastructure.Hotkey
         /// <summary>
         /// Key down
         /// </summary>
-        WMKEYDOWN = 256,
+        WM_KEYDOWN = 256,
 
         /// <summary>
         /// Key up
         /// </summary>
-        WMKEYUP = 257,
+        WM_KEYUP = 257,
 
         /// <summary>
         /// System key up
         /// </summary>
-        WMSYSKEYUP = 261,
+        WM_SYSKEYUP = 261,
 
         /// <summary>
         /// System key down
         /// </summary>
-        WMSYSKEYDOWN = 260,
+        WM_SYSKEYDOWN = 260,
     }
 }

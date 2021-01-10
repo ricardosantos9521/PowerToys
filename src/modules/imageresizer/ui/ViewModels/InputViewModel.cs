@@ -4,14 +4,15 @@
 // ShowAdvancedCommand = new RelayCommand(ShowAdvanced);
 
 using System.Windows.Input;
-using ImageResizer.Helpers;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using ImageResizer.Models;
 using ImageResizer.Properties;
 using ImageResizer.Views;
 
 namespace ImageResizer.ViewModels
 {
-    public class InputViewModel : Observable
+    public class InputViewModel : ViewModelBase
     {
         private readonly ResizeBatch _batch;
         private readonly MainViewModel _mainViewModel;
@@ -28,10 +29,7 @@ namespace ImageResizer.ViewModels
             _mainView = mainView;
 
             Settings = settings;
-            if (settings != null)
-            {
-                settings.CustomSize.PropertyChanged += (sender, e) => settings.SelectedSize = (CustomSize)sender;
-            }
+            settings.CustomSize.PropertyChanged += (sender, e) => settings.SelectedSize = (CustomSize)sender;
 
             ResizeCommand = new RelayCommand(Resize);
             CancelCommand = new RelayCommand(Cancel);

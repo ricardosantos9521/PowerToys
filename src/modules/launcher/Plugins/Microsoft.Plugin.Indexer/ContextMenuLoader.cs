@@ -5,22 +5,20 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO.Abstractions;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Plugin.Indexer.SearchHelper;
 using Wox.Infrastructure;
+using Wox.Infrastructure.Logger;
 using Wox.Plugin;
-using Wox.Plugin.Logger;
 
 namespace Microsoft.Plugin.Indexer
 {
     internal class ContextMenuLoader : IContextMenu
     {
-        private readonly IPath _path = new FileSystem().Path;
-
         private readonly PluginInitContext _context;
 
         public enum ResultType
@@ -43,7 +41,7 @@ namespace Microsoft.Plugin.Indexer
             var contextMenus = new List<ContextMenuResult>();
             if (selectedResult.ContextData is SearchResult record)
             {
-                ResultType type = _path.HasExtension(record.Path) ? ResultType.File : ResultType.Folder;
+                ResultType type = Path.HasExtension(record.Path) ? ResultType.File : ResultType.Folder;
 
                 if (type == ResultType.File)
                 {
@@ -59,7 +57,7 @@ namespace Microsoft.Plugin.Indexer
                 contextMenus.Add(new ContextMenuResult
                 {
                     PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                    Title = Properties.Resources.Microsoft_plugin_indexer_copy_path,
+                    Title = _context.API.GetTranslation("Microsoft_plugin_indexer_copy_path"),
                     Glyph = "\xE8C8",
                     FontFamily = "Segoe MDL2 Assets",
                     AcceleratorKey = Key.C,
@@ -74,9 +72,8 @@ namespace Microsoft.Plugin.Indexer
                         }
                         catch (Exception e)
                         {
-                            var message = Properties.Resources.Microsoft_plugin_indexer_clipboard_failed;
-                            Log.Exception(message, e, GetType());
-
+                            var message = "Fail to set text in clipboard";
+                            LogException(message, e);
                             _context.API.ShowMsg(message);
                             return false;
                         }
@@ -85,7 +82,7 @@ namespace Microsoft.Plugin.Indexer
                 contextMenus.Add(new ContextMenuResult
                 {
                     PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                    Title = Properties.Resources.Microsoft_plugin_indexer_open_in_console,
+                    Title = _context.API.GetTranslation("Microsoft_plugin_indexer_open_in_console"),
                     Glyph = "\xE756",
                     FontFamily = "Segoe MDL2 Assets",
                     AcceleratorKey = Key.C,
@@ -97,7 +94,7 @@ namespace Microsoft.Plugin.Indexer
                         {
                             if (type == ResultType.File)
                             {
-                                Helper.OpenInConsole(_path.GetDirectoryName(record.Path));
+                                Helper.OpenInConsole(Path.GetDirectoryName(record.Path));
                             }
                             else
                             {
@@ -108,7 +105,7 @@ namespace Microsoft.Plugin.Indexer
                         }
                         catch (Exception e)
                         {
-                            Log.Exception($"Failed to open {record.Path} in console, {e.Message}", e, GetType());
+                            Log.Exception($"|Microsoft.Plugin.Indexer.ContextMenuLoader.LoadContextMenus| Failed to open {record.Path} in console, {e.Message}", e);
                             return false;
                         }
                     },
@@ -119,13 +116,13 @@ namespace Microsoft.Plugin.Indexer
         }
 
         // Function to add the context menu item to run as admin
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We want to keep the process alive, and instead log the exception message")]
-        private static ContextMenuResult CreateRunAsAdminContextMenu(SearchResult record)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We want to keep the process alive, and instead log the exeption message")]
+        private ContextMenuResult CreateRunAsAdminContextMenu(SearchResult record)
         {
             return new ContextMenuResult
             {
                 PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                Title = Properties.Resources.Microsoft_plugin_indexer_run_as_administrator,
+                Title = _context.API.GetTranslation("Microsoft_plugin_indexer_run_as_administrator"),
                 Glyph = "\xE7EF",
                 FontFamily = "Segoe MDL2 Assets",
                 AcceleratorKey = Key.Enter,
@@ -139,7 +136,7 @@ namespace Microsoft.Plugin.Indexer
                     }
                     catch (Exception e)
                     {
-                        Log.Exception($"Failed to run {record.Path} as admin, {e.Message}", e, MethodBase.GetCurrentMethod().DeclaringType);
+                        Log.Exception($"|Microsoft.Plugin.Indexer.ContextMenu| Failed to run {record.Path} as admin, {e.Message}", e);
                         return false;
                     }
                 },
@@ -149,10 +146,9 @@ namespace Microsoft.Plugin.Indexer
         // Function to test if the file can be run as admin
         private bool CanFileBeRunAsAdmin(string path)
         {
-            string fileExtension = _path.GetExtension(path);
+            string fileExtension = Path.GetExtension(path);
             foreach (string extension in appExtensions)
             {
-                // Using OrdinalIgnoreCase since this is internal
                 if (extension.Equals(fileExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
@@ -168,7 +164,7 @@ namespace Microsoft.Plugin.Indexer
             return new ContextMenuResult
             {
                 PluginName = Assembly.GetExecutingAssembly().GetName().Name,
-                Title = Properties.Resources.Microsoft_plugin_indexer_open_containing_folder,
+                Title = _context.API.GetTranslation("Microsoft_plugin_indexer_open_containing_folder"),
                 Glyph = "\xE838",
                 FontFamily = "Segoe MDL2 Assets",
                 AcceleratorKey = Key.E,
@@ -181,9 +177,8 @@ namespace Microsoft.Plugin.Indexer
                     }
                     catch (Exception e)
                     {
-                        var message = $"{Properties.Resources.Microsoft_plugin_indexer_folder_open_failed} {record.Path}";
-                        Log.Exception(message, e, GetType());
-
+                        var message = $"Fail to open file at {record.Path}";
+                        LogException(message, e);
                         _context.API.ShowMsg(message);
                         return false;
                     }
@@ -191,6 +186,11 @@ namespace Microsoft.Plugin.Indexer
                     return true;
                 },
             };
+        }
+
+        public static void LogException(string message, Exception e)
+        {
+            Log.Exception($"|Microsoft.Plugin.Folder.ContextMenu|{message}", e);
         }
     }
 }

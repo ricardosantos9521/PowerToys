@@ -18,10 +18,9 @@ namespace Microsoft.Plugin.Uri.UriHelper
             }
 
             // Handle common cases UriBuilder does not handle
-            // Using CurrentCulture since this is a user typed string
-            if (input.EndsWith(":", StringComparison.CurrentCulture)
-                || input.EndsWith(".", StringComparison.CurrentCulture)
-                || input.EndsWith(":/", StringComparison.CurrentCulture))
+            if (input.EndsWith(":", StringComparison.Ordinal)
+                || input.EndsWith(".", StringComparison.Ordinal)
+                || input.EndsWith(":/", StringComparison.Ordinal))
             {
                 result = default;
                 return false;

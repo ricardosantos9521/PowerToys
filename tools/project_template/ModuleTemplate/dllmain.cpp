@@ -1,6 +1,6 @@
 #include "pch.h"
 #include <interface/powertoy_module_interface.h>
-#include <common/SettingsAPI/settings_objects.h>
+#include <common/settings_objects.h>
 #include "trace.h"
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
@@ -66,14 +66,8 @@ public:
         delete this;
     }
 
-    // Return the localized display name of the powertoy
+    // Return the display name of the powertoy, this will be cached by the runner
     virtual const wchar_t* get_name() override
-    {
-        return MODULE_NAME;
-    }
-
-    // Return the non localized key of the powertoy, this will be cached by the runner
-    virtual const wchar_t* get_key() override
     {
         return MODULE_NAME;
     }
@@ -164,7 +158,7 @@ public:
         {
             // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+                PowerToysSettings::PowerToyValues::from_json_string(config);
 
             // Update a bool property.
             //if (auto v = values.get_bool_value(L"bool_toggle_1")) {
@@ -224,7 +218,7 @@ void $safeprojectname$::init_settings()
     {
         // Load and parse the settings file for this PowerToy.
         PowerToysSettings::PowerToyValues settings =
-            PowerToysSettings::PowerToyValues::load_from_settings_file($safeprojectname$::get_key());
+            PowerToysSettings::PowerToyValues::load_from_settings_file($safeprojectname$::get_name());
 
         // Load a bool property.
         //if (auto v = settings.get_bool_value(L"bool_toggle_1")) {

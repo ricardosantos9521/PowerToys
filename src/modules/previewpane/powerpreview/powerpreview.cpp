@@ -1,73 +1,50 @@
 #include "pch.h"
-#include <common/SettingsAPI/settings_objects.h>
+#include <settings_objects.h>
+#include <common.h>
 #include "powerpreview.h"
 #include "trace.h"
 #include "settings.h"
 #include "Generated Files/resource.h"
-#include <common/notifications/dont_show_again.h>
-#include <common/notifications/notifications.h>
-
-#include <common/utils/elevation.h>
-#include <common/utils/resources.h>
-#include <common/utils/os-detect.h>
-
-// Constructor
-PowerPreviewModule::PowerPreviewModule() :
-    m_moduleName(GET_RESOURCE_STRING(IDS_MODULE_NAME)),
-    app_key(powerpreviewConstants::ModuleKey)
-{
-    // Initialize the toggle states for each module
-    init_settings();
-
-    m_fileExplorerModules.emplace_back(std::make_unique<PreviewHandlerSettings>(
-        true,
-        L"svg-previewer-toggle-setting",
-        GET_RESOURCE_STRING(IDS_PREVPANE_SVG_SETTINGS_DESCRIPTION),
-        L"{ddee2b8a-6807-48a6-bb20-2338174ff779}",
-        L"Svg Preview Handler",
-        std::make_unique<RegistryWrapper>()));
-
-    m_fileExplorerModules.emplace_back(std::make_unique<PreviewHandlerSettings>(
-        true,
-        L"md-previewer-toggle-setting",
-        GET_RESOURCE_STRING(IDS_PREVPANE_MD_SETTINGS_DESCRIPTION),
-        L"{45769bcc-e8fd-42d0-947e-02beef77a1f5}",
-        L"Markdown Preview Handler",
-        std::make_unique<RegistryWrapper>()));
-
-    m_fileExplorerModules.emplace_back(std::make_unique<ThumbnailProviderSettings>(
-        true,
-        L"svg-thumbnail-toggle-setting",
-        GET_RESOURCE_STRING(IDS_SVG_THUMBNAIL_PROVIDER_SETTINGS_DESCRIPTION),
-        L"{36B27788-A8BB-4698-A756-DF9F11F64F84}",
-        L"Svg Thumbnail Provider",
-        std::make_unique<RegistryWrapper>(),
-        L".svg\\shellex\\{E357FCCD-A995-4576-B01F-234630154E96}"));
-
-    // If the user is on the new settings interface, File Explorer might be disabled if they updated from old to new settings, so initialize the registry state in the constructor as PowerPreviewModule::enable/disable will not be called on startup
-    if (UseNewSettings())
-    {
-        update_registry_to_match_toggles();
-    }
-}
 
 // Destroy the powertoy and free memory.
 void PowerPreviewModule::destroy()
 {
     Trace::Destroyed();
+    for (auto previewHandler : this->m_previewHandlers)
+    {
+        if (previewHandler != NULL)
+        {
+            // Disable all the active preview handlers.
+            if (this->m_enabled && previewHandler->GetToggleSettingState())
+            {
+                previewHandler->DisablePreview();
+            }
+
+            delete previewHandler;
+        }
+    }
+
+    for (auto thumbnailProvider : this->m_thumbnailProviders)
+    {
+        if (thumbnailProvider != NULL)
+        {
+            // Disable all the active thumbnail providers.
+            if (this->m_enabled && thumbnailProvider->GetToggleSettingState())
+            {
+                thumbnailProvider->DisablePreview();
+            }
+
+            delete thumbnailProvider;
+        }
+    }
+
     delete this;
 }
 
-// Return the localized display name of the powertoy
+// Return the display name of the powertoy, this will be cached.
 const wchar_t* PowerPreviewModule::get_name()
 {
     return m_moduleName.c_str();
-}
-
-// Return the non localized key of the powertoy, this will be cached by the runner
-const wchar_t* PowerPreviewModule::get_key()
-{
-    return app_key.c_str();
 }
 
 // Return JSON with the configuration options.
@@ -89,12 +66,20 @@ bool PowerPreviewModule::get_config(_Out_ wchar_t* buffer, _Out_ int* buffer_siz
         GET_RESOURCE_STRING(IDS_PRVPANE_FILE_PREV_STTNGS_GROUP_DESC),
         GET_RESOURCE_STRING(IDS_PRVPANE_FILE_PREV_STTNGS_GROUP_TEXT));
 
-    for (auto& fileExplorerModule : m_fileExplorerModules)
+    for (auto previewHandler : this->m_previewHandlers)
     {
         settings.add_bool_toggle(
-            fileExplorerModule->GetToggleSettingName(),
-            fileExplorerModule->GetToggleSettingDescription(),
-            fileExplorerModule->GetToggleSettingState());
+            previewHandler->GetToggleSettingName(),
+            previewHandler->GetToggleSettingDescription(),
+            previewHandler->GetToggleSettingState());
+    }
+
+    for (auto thumbnailProvider : this->m_thumbnailProviders)
+    {
+        settings.add_bool_toggle(
+            thumbnailProvider->GetToggleSettingName(),
+            thumbnailProvider->GetToggleSettingDescription(),
+            thumbnailProvider->GetToggleSettingState());
     }
 
     return settings.serialize_to_buffer(buffer, buffer_size);
@@ -105,19 +90,16 @@ void PowerPreviewModule::set_config(const wchar_t* config)
 {
     try
     {
-        PowerToysSettings::PowerToyValues settings = PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+        PowerToysSettings::PowerToyValues settings = PowerToysSettings::PowerToyValues::from_json_string(config);
 
-        bool updateSuccess = true;
-        bool isElevated = is_process_elevated(false);
-        for (auto& fileExplorerModule : m_fileExplorerModules)
+        for (auto previewHandler : this->m_previewHandlers)
         {
-            // If the user is using the new settings interface, as it does not have a toggle to modify enabled consider File Explorer to always be enabled
-            updateSuccess = updateSuccess && fileExplorerModule->UpdateState(settings, this->m_enabled || UseNewSettings(), isElevated);
+            previewHandler->UpdateState(settings, this->m_enabled);
         }
 
-        if (!updateSuccess)
+        for (auto thumbnailProvider : this->m_thumbnailProviders)
         {
-            show_update_warning_message();
+            thumbnailProvider->UpdateState(settings, this->m_enabled);
         }
 
         settings.save_to_settings_file();
@@ -131,10 +113,30 @@ void PowerPreviewModule::set_config(const wchar_t* config)
 // Enable preview handlers.
 void PowerPreviewModule::enable()
 {
-    // Should only be done for old settings as it is already done for new settings in the constructor.
-    if (!UseNewSettings())
+    for (auto previewHandler : this->m_previewHandlers)
     {
-        update_registry_to_match_toggles();
+        if (previewHandler->GetToggleSettingState())
+        {
+            // Enable all the previews with initial state set as true.
+            previewHandler->EnablePreview();
+        }
+        else
+        {
+            previewHandler->DisablePreview();
+        }
+    }
+
+    for (auto thumbnailProvider : this->m_thumbnailProviders)
+    {
+        if (thumbnailProvider->GetToggleSettingState())
+        {
+            // Enable all the thumbnail providers with initial state set as true.
+            thumbnailProvider->EnableThumbnailProvider();
+        }
+        else
+        {
+            thumbnailProvider->DisableThumbnailProvider();
+        }
     }
 
     if (!this->m_enabled)
@@ -148,12 +150,15 @@ void PowerPreviewModule::enable()
 // Disable active preview handlers.
 void PowerPreviewModule::disable()
 {
-    elevation_check_wrapper([this]() {
-        for (auto& fileExplorerModule : m_fileExplorerModules)
-        {
-            fileExplorerModule->Disable();
-        }
-    });
+    for (auto previewHandler : this->m_previewHandlers)
+    {
+        previewHandler->DisablePreview();
+    }
+
+    for (auto thumbnailProvider : this->m_thumbnailProviders)
+    {
+        thumbnailProvider->DisableThumbnailProvider();
+    }
 
     if (this->m_enabled)
     {
@@ -176,93 +181,21 @@ void PowerPreviewModule::init_settings()
     {
         // Load and parse the settings file for this PowerToy.
         PowerToysSettings::PowerToyValues settings =
-            PowerToysSettings::PowerToyValues::load_from_settings_file(PowerPreviewModule::get_key());
+            PowerToysSettings::PowerToyValues::load_from_settings_file(PowerPreviewModule::get_name());
 
         // Load settings states.
-        for (auto& fileExplorerModule : m_fileExplorerModules)
+        for (auto previewHandler : this->m_previewHandlers)
         {
-            fileExplorerModule->LoadState(settings);
+            previewHandler->LoadState(settings);
+        }
+
+        for (auto thumbnailProvider : this->m_thumbnailProviders)
+        {
+            thumbnailProvider->LoadState(settings);
         }
     }
     catch (std::exception const& e)
     {
         Trace::InitSetErrorLoadingFile(e.what());
     }
-}
-
-// Function to check if the registry states need to be updated
-bool PowerPreviewModule::is_registry_update_required()
-{
-    for (auto& fileExplorerModule : m_fileExplorerModules)
-    {
-        if (fileExplorerModule->GetToggleSettingState() != fileExplorerModule->CheckRegistryState())
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// Function to warn the user that PowerToys needs to run as administrator for changes to take effect
-void PowerPreviewModule::show_update_warning_message()
-{
-    using namespace notifications;
-    if (!is_toast_disabled(PreviewModulesDontShowAgainRegistryPath, PreviewModulesDisableIntervalInDays))
-    {
-        std::vector<action_t> actions = {
-            link_button{ GET_RESOURCE_STRING(IDS_FILEEXPLORER_ADMIN_RESTART_WARNING_OPEN_SETTINGS),
-                         L"powertoys://open_settings/" },
-            link_button{ GET_RESOURCE_STRING(IDS_FILEEXPLORER_ADMIN_RESTART_WARNING_DONT_SHOW_AGAIN),
-                         L"powertoys://couldnt_toggle_powerpreview_modules_disable/" }
-        };
-        show_toast_with_activations(GET_RESOURCE_STRING(IDS_FILEEXPLORER_ADMIN_RESTART_WARNING_DESCRIPTION),
-                                    GET_RESOURCE_STRING(IDS_FILEEXPLORER_ADMIN_RESTART_WARNING_TITLE),
-                                    {},
-                                    std::move(actions));
-    }
-}
-
-// Function that checks if a registry method is required and if so checks if the process is elevated and accordingly executes the method or shows a warning
-void PowerPreviewModule::registry_and_elevation_check_wrapper(std::function<void()> method)
-{
-    // Check if a registry update is required
-    if (is_registry_update_required())
-    {
-        elevation_check_wrapper(method);
-    }
-}
-
-// Function that checks if the process is elevated and accordingly executes the method or shows a warning
-void PowerPreviewModule::elevation_check_wrapper(std::function<void()> method)
-{
-    // Check if the process is elevated in order to have permissions to modify HKLM registry
-    if (is_process_elevated(false))
-    {
-        method();
-    }
-    // Show a warning if it doesn't have permissions
-    else
-    {
-        show_update_warning_message();
-    }
-}
-
-// Function that updates the registry state to match the toggle states
-void PowerPreviewModule::update_registry_to_match_toggles()
-{
-    registry_and_elevation_check_wrapper([this]() {
-        for (auto& fileExplorerModule : m_fileExplorerModules)
-        {
-            if (fileExplorerModule->GetToggleSettingState())
-            {
-                // Enable all the modules with initial state set as true.
-                fileExplorerModule->Enable();
-            }
-            else
-            {
-                fileExplorerModule->Disable();
-            }
-        }
-    });
 }
