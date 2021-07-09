@@ -36,15 +36,15 @@
                     </winui:NavigationViewItem.Icon>
                 </winui:NavigationViewItem>
 
-                <winui:NavigationViewItem x:Uid="Shell_ColorPicker" helpers:NavHelper.NavigateTo="views:ColorPickerPage" AutomationProperties.HeadingLevel="Level1">
-                    <winui:NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xEF3C;"/>
-                    </winui:NavigationViewItem.Icon>
-                </winui:NavigationViewItem>
-
                 <winui:NavigationViewItem x:Uid="Shell_Awake" helpers:NavHelper.NavigateTo="views:AwakePage" AutomationProperties.HeadingLevel="Level1">
                     <winui:NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xEC32;"/>
+                    </winui:NavigationViewItem.Icon>
+                </winui:NavigationViewItem>
+                
+                <winui:NavigationViewItem x:Uid="Shell_ColorPicker" helpers:NavHelper.NavigateTo="views:ColorPickerPage" AutomationProperties.HeadingLevel="Level1">
+                    <winui:NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xEF3C;"/>
                     </winui:NavigationViewItem.Icon>
                 </winui:NavigationViewItem>
 
@@ -89,6 +89,14 @@
                         <FontIcon Glyph="&#xEDA7;"/>
                     </winui:NavigationViewItem.Icon>
                 </winui:NavigationViewItem>
+
+                <!--TODO(yuyoyuppe): uncomment when VCM should be enabled-->
+                <!--<winui:NavigationViewItem x:Uid="Shell_VideoConference" helpers:NavHelper.NavigateTo="views:VideoConferencePage" IsEnabled="{x:Bind ViewModel.IsVideoConferenceBuild, Mode=OneWay}">
+                    <winui:NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE714;"/>
+                    </winui:NavigationViewItem.Icon>
+                </winui:NavigationViewItem>-->
+
             </winui:NavigationView.MenuItems>
             <i:Interaction.Behaviors>
                 <behaviors:NavigationViewHeaderBehavior

@@ -20,12 +20,12 @@
 #include <common/updating/updateState.h>
 #include <common/utils/appMutex.h>
 #include <common/utils/elevation.h>
+#include <common/utils/os-detect.h>
 #include <common/utils/processApi.h>
 #include <common/utils/resources.h>
-#include <common/winstore/winstore.h>
 
-#include "update_utils.h"
-#include "action_runner_utils.h"
+#include "UpdateUtils.h"
+#include "ActionRunnerUtils.h"
 
 #include <winrt/Windows.System.h>
 
@@ -44,8 +44,7 @@
 #include <common/utils/winapi_error.h>
 #include <common/utils/window.h>
 #include <common/version/version.h>
-
-extern updating::notifications::strings Strings;
+#include <gdiplus.h>
 
 namespace
 {
@@ -120,32 +119,21 @@ int runner(bool isProcessElevated, bool openSettings, bool openOobe)
         debug_verify_launcher_assets();
 
         std::thread{ [] {
-            periodic_update_worker();
+            PeriodicUpdateWorker();
         } }.detach();
 
-        if (winstore::running_as_packaged())
-        {
-            std::thread{ [] {
-                start_msi_uninstallation_sequence();
-            } }.detach();
-        }
-        else
-        {
-            std::thread{ [] {
-                if (updating::uninstall_previous_msix_version_async().get())
-                {
-                    notifications::show_toast(GET_RESOURCE_STRING(IDS_OLDER_MSIX_UNINSTALLED).c_str(), L"PowerToys");
-                }
-            } }.detach();
-        }
-
-        notifications::register_background_toast_handler();
+        std::thread{ [] {
+            if (updating::uninstall_previous_msix_version_async().get())
+            {
+                notifications::show_toast(GET_RESOURCE_STRING(IDS_OLDER_MSIX_UNINSTALLED).c_str(), L"PowerToys");
+            }
+        } }.detach();
 
         chdir_current_executable();
         // Load Powertoys DLLs
 
-        const std::array<std::wstring_view, 9> knownModules = {
-            L"modules/FancyZones/fancyzones.dll",
+        std::vector<std::wstring_view> knownModules = {
+            L"modules/FancyZones/FancyZonesModuleInterface.dll",
             L"modules/FileExplorerPreview/powerpreview.dll",
             L"modules/ImageResizer/ImageResizerExt.dll",
             L"modules/KeyboardManager/KeyboardManager.dll",
@@ -154,6 +142,8 @@ int runner(bool isProcessElevated, bool openSettings, bool openOobe)
             L"modules/ShortcutGuide/ShortcutGuideModuleInterface/ShortcutGuideModuleInterface.dll",
             L"modules/ColorPicker/ColorPicker.dll",
             L"modules/Awake/AwakeModuleInterface.dll",
+            // TODO(yuyoyuppe): uncomment when VCM should be enabled
+            //L"modules/VideoConference/VideoConferenceModule.dll"
         };
 
         for (const auto& moduleSubdir : knownModules)
@@ -258,7 +248,7 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     else if (param.starts_with(update_now))
     {
         std::wstring args{ cmdArg::UPDATE_NOW_LAUNCH_STAGE1 };
-        launch_action_runner(args.c_str());
+        LaunchPowerToysUpdate(args.c_str());
         return toast_notification_handler_result::exit_success;
     }
     else if (param == couldnt_toggle_powerpreview_modules_disable)
@@ -278,6 +268,10 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    Gdiplus::GdiplusStartupInput gpStartupInput;
+    ULONG_PTR gpToken;
+    GdiplusStartup(&gpToken, &gpStartupInput, NULL);
+
     winrt::init_apartment();
     const wchar_t* securityDescriptor =
         L"O:BA" // Owner: Builtin (local) administrator

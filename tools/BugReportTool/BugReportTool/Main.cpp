@@ -245,24 +245,11 @@ void ReportDotNetInstallationInfo(const filesystem::path& tmpDir)
     }
 }
 
-void ReportBootstrapperLog(const filesystem::path& targetDir)
+void ReportVCMLogs(const filesystem::path& tmpDir, const filesystem::path& reportDir)
 {
-  for (const auto entry : filesystem::directory_iterator{temp_directory_path()})
-  {
-      if (!entry.is_regular_file() || !entry.path().has_filename())
-      {
-          continue;
-      }
-
-      const std::wstring filename = entry.path().filename().native();
-      if (!filename.starts_with(L"powertoys-bootstrapper-") || !filename.ends_with(L".log"))
-      {
-          continue;
-      }
-      
-      std::error_code _;
-      copy(entry.path(), targetDir, _);
-  }
+    error_code ec;
+    copy(tmpDir / "PowerToysVideoConference_x86.log", reportDir, ec);
+    copy(tmpDir / "PowerToysVideoConference_x64.log", reportDir, ec);
 }
 
 int wmain(int argc, wchar_t* argv[], wchar_t*)
@@ -290,10 +277,9 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
     auto settingsRootPath = PTSettingsHelper::get_root_save_folder_location();
     settingsRootPath = settingsRootPath + L"\\";
 
-    // Copy to a temp folder
-    auto tmpDir = temp_directory_path();
-    tmpDir = tmpDir.append("PowerToys\\");
-    if (!DeleteFolder(tmpDir))
+    const auto tempDir = temp_directory_path();
+    auto reportDir = temp_directory_path() / "PowerToys\\";
+    if (!DeleteFolder(reportDir))
     {
         printf("Failed to delete temp folder\n");
         return 1;
@@ -301,10 +287,10 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
 
     try
     {
-        copy(settingsRootPath, tmpDir, copy_options::recursive);
+        copy(settingsRootPath, reportDir, copy_options::recursive);
         
         // Remove updates folder contents
-        DeleteFolder(tmpDir / "Updates");
+        DeleteFolder(reportDir / "Updates");
     }
     catch (...)
     {
@@ -313,30 +299,30 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
     }
 
     // Hide sensitive information
-    HideUserPrivateInfo(tmpDir);
+    HideUserPrivateInfo(reportDir);
 
     // Write windows settings to the temporary folder
-    ReportWindowsSettings(tmpDir);
+    ReportWindowsSettings(reportDir);
 
     // Write monitors info to the temporary folder
-    ReportMonitorInfo(tmpDir);
+    ReportMonitorInfo(reportDir);
 
     // Write windows version info to the temporary folder
-    ReportWindowsVersion(tmpDir);
+    ReportWindowsVersion(reportDir);
 
     // Write dotnet installation info to the temporary folder
-    ReportDotNetInstallationInfo(tmpDir);
+    ReportDotNetInstallationInfo(reportDir);
 
     // Write registry to the temporary folder
-    ReportRegistry(tmpDir);
+    ReportRegistry(reportDir);
 
     // Write compatibility tab info to the temporary folder
-    ReportCompatibilityTab(tmpDir);
+    ReportCompatibilityTab(reportDir);
 
     // Write event viewer logs info to the temporary folder
-    EventViewer::ReportEventViewerInfo(tmpDir);
+    EventViewer::ReportEventViewerInfo(reportDir);
 
-    ReportBootstrapperLog(tmpDir);
+    ReportVCMLogs(tempDir, reportDir);
 
     // Zip folder
     auto zipPath = path::path(saveZipPath);
@@ -347,7 +333,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
 
     try
     {
-        ZipFolder(zipPath, tmpDir);
+        ZipFolder(zipPath, reportDir);
     }
     catch (...)
     {
@@ -355,6 +341,6 @@ int wmain(int argc, wchar_t* argv[], wchar_t*)
         return 1;
     }
 
-    DeleteFolder(tmpDir);
+    DeleteFolder(reportDir);
     return 0;
 }

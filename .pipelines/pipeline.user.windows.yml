@@ -61,10 +61,16 @@ build:
             - 'x64/**/*.pdb'
           exclude:
             - 'x64/Release/obj/**/*.pdb'
+        # TODO(yuyoyuppe): uncomment when VCM should be enabled
+        #- from: 'x86/Release'
+        #  to: 'Build_Output'
+        #  include:
+        #    - 'modules\VideoConference\VideoConferenceProxyFilter_x86.dll'
         - from: 'x64/Release'
           to: 'Build_Output'
           include:
             - 'PowerToys.ActionRunner.exe'
+            - 'PowerToys.Update.exe'
             - 'BackgroundActivatorDLL.dll'
             - 'Notifications.dll'
             - 'os-detection.dll'
@@ -92,8 +98,10 @@ build:
             - 'modules\FancyZones\fancyzones.dll'
             - 'modules\FancyZones\FancyZonesEditor.exe'
             - 'modules\FancyZones\FancyZonesEditor.dll'
+            - 'modules\FancyZones\FancyZonesModuleInterface.dll'
             - 'modules\FancyZones\ManagedCommon.dll'
             - 'modules\FancyZones\ManagedTelemetry.dll'
+            - 'modules\FancyZones\PowerToys.FancyZones.exe'
             - 'modules\FancyZones\Telemetry.dll'
             - 'modules\FancyZones\Microsoft.PowerToys.Common.UI.dll'
             - 'modules\FileExplorerPreview\ManagedTelemetry.dll'
@@ -123,7 +131,6 @@ build:
             - 'modules\launcher\Microsoft.Launcher.dll'
             - 'modules\launcher\Plugins\Calculator\Microsoft.PowerToys.Run.Plugin.Calculator.dll'
             - 'modules\launcher\Plugins\Calculator\ManagedTelemetry.dll'
-            - 'modules\launcher\Plugins\UnitConverter\Community.PowerToys.Run.Plugin.UnitConverter.dll'
             - 'modules\launcher\Plugins\Microsoft.Plugin.Folder\Microsoft.Plugin.Folder.dll'
             - 'modules\launcher\Plugins\Microsoft.Plugin.Folder\ManagedTelemetry.dll'
             - 'modules\launcher\Plugins\Microsoft.Plugin.Indexer\Microsoft.Plugin.Indexer.dll'
@@ -141,6 +148,7 @@ build:
             - 'modules\launcher\Plugins\Microsoft.Plugin.Uri\ManagedTelemetry.dll'
             - 'modules\launcher\Plugins\Microsoft.Plugin.WindowWalker\Microsoft.Plugin.WindowWalker.dll'
             - 'modules\launcher\Plugins\Microsoft.Plugin.WindowWalker\ManagedTelemetry.dll'
+            - 'modules\launcher\Plugins\Community.UnitConverter\Community.PowerToys.Run.Plugin.UnitConverter.dll'
             - 'modules\launcher\Plugins\VSCodeWorkspaces\Community.PowerToys.Run.Plugin.VSCodeWorkspaces.dll'
             - 'modules\launcher\Plugins\Service\Microsoft.PowerToys.Run.Plugin.Service.dll'
             - 'modules\launcher\Plugins\System\Microsoft.PowerToys.Run.Plugin.System.dll'
@@ -156,6 +164,9 @@ build:
             - 'modules\PowerRename\PowerRenameExt.dll'
             - 'modules\ShortcutGuide\ShortcutGuide\PowerToys.ShortcutGuide.exe'
             - 'modules\ShortcutGuide\ShortcutGuideModuleInterface\ShortcutGuideModuleInterface.dll'
+            # TODO(yuyoyuppe): uncomment when VCM should be enabled
+            #- 'modules\VideoConference\VideoConferenceModule.dll'
+            #- 'modules\VideoConference\VideoConferenceProxyFilter_x64.dll'
             - 'Settings\ManagedTelemetry.dll'
             - 'Settings\Microsoft.PowerToys.Settings.UI.exe'
             - 'Settings\Microsoft.PowerToys.Settings.UI.Lib.dll'
@@ -174,6 +185,7 @@ build:
           to: 'Build_Output'
           include:
             - 'BugReportTool\BugReportTool.exe'
+            - 'WebcamReportTool\WebcamReportTool.exe'
           signing_options:
             sign_inline: true  # This does signing a soon as this command completes
     - !!buildcommand
@@ -234,4 +246,3 @@ static_analysis_options:
     files_to_scan:
       - exclude:
         - '**/*.lcl'
-
